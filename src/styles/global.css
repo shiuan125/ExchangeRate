@@ -1,0 +1,434 @@
+/* ==========================================================================
+   Design tokens
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  --paper:      #FAFAF8;
+  --board:      #FFFFFF;
+  --rule:       #E4E4DF;
+  --rule-bold:  #C9C9C2;
+
+  --ink:        #16161A;
+  --ink-mid:    #55555E;
+  --ink-light:  #8E8E96;
+
+  --up:         #C8232C;
+  --down:       #157A4A;
+  --flat:       #8E8E96;
+
+  --live:       #157A4A;
+  --closed:     #8E8E96;
+  --stale:      #B5721A;
+
+  --usd:        #1E3A5F;
+  --jpy:        #7A2E3A;
+}
+
+[data-theme="dark"] {
+  --paper:      #101013;
+  --board:      #18181C;
+  --rule:       #26262C;
+  --rule-bold:  #35353D;
+
+  --ink:        #EDEDEA;
+  --ink-mid:    #A4A4AC;
+  --ink-light:  #6E6E78;
+
+  --up:         #E8636B;
+  --down:       #3FB07E;
+  --flat:       #6E6E78;
+
+  --live:       #3FB07E;
+  --closed:     #6E6E78;
+  --stale:      #D19A3E;
+
+  --usd:        #6E9BD1;
+  --jpy:        #CF8592;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --paper:      #101013;
+    --board:      #18181C;
+    --rule:       #26262C;
+    --rule-bold:  #35353D;
+    --ink:        #EDEDEA;
+    --ink-mid:    #A4A4AC;
+    --ink-light:  #6E6E78;
+    --up:         #E8636B;
+    --down:       #3FB07E;
+    --flat:       #6E6E78;
+    --live:       #3FB07E;
+    --closed:     #6E6E78;
+    --stale:      #D19A3E;
+    --usd:        #6E9BD1;
+    --jpy:        #CF8592;
+  }
+}
+
+[data-theme="light"]  { color-scheme: light; }
+[data-theme="dark"]   { color-scheme: dark; }
+[data-theme="system"] { color-scheme: light dark; }
+
+:root {
+  --font-num: 'Roboto Mono', 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont,
+             'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+
+  --t-hero:   clamp(2.75rem, 8vw, 4rem);
+  --t-lg:     clamp(1.5rem, 4vw, 1.875rem);
+  --t-md:     1.0625rem;
+  --t-sm:     0.875rem;
+  --t-xs:     0.75rem;
+  --t-micro:  0.6875rem;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  --radius:    10px;
+  --radius-sm: 6px;
+
+  --maxw: 720px;
+}
+
+/* ==========================================================================
+   Reset & base
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--t-md);
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: var(--t-micro);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Page layout
+   ========================================================================== */
+
+.page {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--s-5) var(--s-4) var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-7);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+}
+
+.page-title {
+  font-family: var(--font-ui);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink);
+}
+
+.section-title {
+  font-family: var(--font-ui);
+  font-size: var(--t-md);
+  font-weight: 600;
+  margin: 0 0 var(--s-4);
+  color: var(--ink);
+}
+
+.rate-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--ink-light);
+  font-size: var(--t-sm);
+  padding: var(--s-7) 0;
+}
+
+.empty-state-sub {
+  margin-top: var(--s-1);
+}
+
+.error-banner {
+  font-size: var(--t-xs);
+  color: var(--stale);
+  margin: 0 0 var(--s-4);
+}
+
+/* ==========================================================================
+   MarketStatus
+   ========================================================================== */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--ink-mid);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--live {
+  background: var(--live);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+.status-dot--closed { background: var(--closed); }
+.status-dot--stale  { background: var(--stale); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot--live { animation: none; }
+}
+
+.board-time {
+  font-size: var(--t-xs);
+  color: var(--ink-light);
+  margin-top: var(--s-1);
+  text-align: right;
+}
+
+/* ==========================================================================
+   RateCard
+   ========================================================================== */
+
+.card {
+  background: var(--board);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.card-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-left: var(--s-3);
+  border-left: 3px solid var(--usd);
+  margin-bottom: var(--s-5);
+}
+
+.card-title--jpy {
+  border-left-color: var(--jpy);
+}
+
+.card-code {
+  font-family: var(--font-num);
+  font-size: var(--t-md);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.card-name {
+  font-size: var(--t-sm);
+  color: var(--ink-light);
+}
+
+.rate-group + .rate-group {
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule);
+}
+
+.rate-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  margin-top: var(--s-3);
+}
+
+.rate-hint {
+  display: block;
+  font-size: var(--t-micro);
+  color: var(--ink-light);
+}
+
+.rate-value {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+  display: inline-block;
+  margin-top: var(--s-1);
+}
+
+.rate-value--spot { font-size: var(--t-hero); font-weight: 500; }
+.rate-value--cash { font-size: var(--t-lg);   font-weight: 400; color: var(--ink-mid); }
+
+@keyframes flip-in {
+  0%   { transform: rotateX(-90deg); opacity: 0; }
+  100% { transform: rotateX(0);      opacity: 1; }
+}
+
+.rate-value.is-updating {
+  animation: flip-in 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  transform-origin: center top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rate-value.is-updating { animation: none; }
+}
+
+/* ==========================================================================
+   Segmented control
+   ========================================================================== */
+
+.segment {
+  display: inline-flex;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.segment button {
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  padding: var(--s-2) var(--s-4);
+  border: none;
+  background: transparent;
+  color: var(--ink-light);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.segment button[aria-pressed="true"] {
+  background: var(--board);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.segment--theme button {
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--t-xs);
+}
+
+/* ==========================================================================
+   HistoryChart
+   ========================================================================== */
+
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.chart-wrap {
+  height: 320px;
+}
+
+.chart-tooltip {
+  background: var(--board);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--s-3);
+  font-size: var(--t-xs);
+}
+
+.chart-tooltip-date {
+  color: var(--ink-light);
+  margin-bottom: var(--s-2);
+}
+
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .rate-hint {
+    display: none;
+  }
+
+  .card {
+    padding: var(--s-4);
+  }
+
+  .segment {
+    width: 100%;
+  }
+
+  .segment button {
+    flex: 1;
+  }
+
+  .chart-controls {
+    flex-direction: column;
+  }
+
+  .chart-wrap {
+    height: 260px;
+  }
+}

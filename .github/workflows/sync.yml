@@ -1,0 +1,21 @@
+name: Sync Exchange Rates
+
+on:
+  schedule:
+    # 台北時間 15:40（更新時段結束後 10 分鐘）= UTC 07:40，週一至週五
+    - cron: '40 7 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: node scripts/sync-rates.js
+        env:
+          RATE_API_URL: ${{ secrets.RATE_API_URL }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

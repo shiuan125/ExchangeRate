@@ -1,0 +1,47 @@
+import { useFlip } from '../hooks/useFlip';
+import { formatRate } from '../utils/format';
+
+const NAMES = { USD: '美金', JPY: '日圓' };
+
+function RateNumber({ value, currency, variant }) {
+  const formatted = formatRate(value, currency);
+  const flip = useFlip(formatted);
+  return (
+    <span className={`rate-value rate-value--${variant} num${flip ? ' is-updating' : ''}`}>
+      {formatted}
+    </span>
+  );
+}
+
+function RateGroup({ label, buy, sell, currency, variant }) {
+  return (
+    <div className="rate-group">
+      <span className="eyebrow">{label}</span>
+      <div className="rate-pair">
+        <div>
+          <span className="eyebrow">買入</span>
+          <span className="rate-hint">銀行跟你買</span>
+          <div><RateNumber value={buy} currency={currency} variant={variant} /></div>
+        </div>
+        <div>
+          <span className="eyebrow">賣出</span>
+          <span className="rate-hint">銀行賣給你</span>
+          <div><RateNumber value={sell} currency={currency} variant={variant} /></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function RateCard({ currency, spot, cash }) {
+  return (
+    <div className="card">
+      <div className={`card-title card-title--${currency.toLowerCase()}`}>
+        <span className="card-code">{currency}</span>
+        <span className="card-name">{NAMES[currency]}</span>
+      </div>
+      <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} variant="spot" />
+      <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" />
+    </div>
+  );
+}
