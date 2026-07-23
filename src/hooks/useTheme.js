@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const KEY = 'theme';
-const ORDER = ['system', 'light', 'dark'];
+const ORDER = ['light', 'dark'];
+
+function resolveInitial() {
+  try {
+    const stored = localStorage.getItem(KEY);
+    if (ORDER.includes(stored)) return stored;
+  } catch { /* private mode */ }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 export function useTheme() {
-  const [theme, setThemeState] = useState(() => {
-    try { return localStorage.getItem(KEY) || 'system'; }
-    catch { return 'system'; }
-  });
+  const [theme, setThemeState] = useState(resolveInitial);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -19,10 +24,5 @@ export function useTheme() {
     setThemeState(t);
   }, []);
 
-  // 供 UI 顯示目前實際生效的是亮還是暗
-  const resolved = theme === 'system'
-    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    : theme;
-
-  return { theme, setTheme, resolved };
+  return { theme, setTheme, resolved: theme };
 }
