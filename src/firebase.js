@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -10,4 +10,7 @@ const app = initializeApp({
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 });
 
-export const db = getFirestore(app);
+// 啟用 IndexedDB 本地快取，讓歷史走勢資料離線也能讀到上次同步的結果
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache(),
+});
