@@ -271,9 +271,13 @@ body {
 
 .rate-pair {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--s-4);
   margin-top: var(--s-3);
+}
+
+.rate-pair > div {
+  min-width: 0;
 }
 
 .rate-hint {
@@ -290,6 +294,8 @@ body {
   line-height: 1;
   color: var(--ink);
   display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   margin-top: var(--s-1);
 }
 
@@ -409,6 +415,12 @@ body {
 
   .card {
     padding: var(--s-4);
+  }
+
+  /* 較窄的內嵌瀏覽器（如 LINE LIFF）下，日圓多一位小數，
+     hero 字級的固定下限會讓數字寬度超出卡片，這裡讓它可以再縮小一點 */
+  :root {
+    --t-hero: clamp(1.75rem, 9vw, 4rem);
   }
 
   .segment:not(.segment--theme) {
