@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { fetchYearRows } from './useHistory';
 import { taipeiToday } from '../utils/date';
 
 /** 抓某幣別跨今年／去年的歷史資料（合併排序），供「近N天最低/最高」徽章判斷用 */
@@ -13,20 +12,13 @@ export function useRateHistory(currency) {
       const thisYear = taipeiToday().slice(0, 4);
       const lastYear = String(Number(thisYear) - 1);
 
-      const toRows = (snap) =>
-        snap.exists()
-          ? Object.entries(snap.data()).map(([date, v]) => ({ date, ...v }))
-          : [];
-
       try {
-        const [prevSnap, curSnap] = await Promise.all([
-          getDoc(doc(db, 'rates', `${currency}_${lastYear}`)),
-          getDoc(doc(db, 'rates', `${currency}_${thisYear}`)),
+        const [prevRows, curRows] = await Promise.all([
+          fetchYearRows(currency, lastYear),
+          fetchYearRows(currency, thisYear),
         ]);
         if (!alive) return;
-        const combined = [...toRows(prevSnap), ...toRows(curSnap)]
-          .sort((a, b) => a.date.localeCompare(b.date));
-        setRows(combined);
+        setRows([...prevRows, ...curRows].sort((a, b) => a.date.localeCompare(b.date)));
       } catch (e) {
         console.error(e);
         if (alive) setRows([]);

@@ -30,8 +30,9 @@ export function computeRateBadge(rows, current, field, kind) {
       .filter((r) => r.date >= cutoff && r.date <= today)
       .map((r) => r[field])
       .filter((v) => typeof v === 'number');
-    values.push(current);
+    if (!values.length) continue; // 區間內剛好沒有實際資料（例如連假），無從比較，跳過
 
+    values.push(current);
     const extreme = kind === 'low' ? Math.min(...values) : Math.max(...values);
     const qualifies = kind === 'low' ? current <= extreme : current >= extreme;
     if (qualifies) return `${w.label}${kind === 'low' ? '最低' : '最高'}`;
