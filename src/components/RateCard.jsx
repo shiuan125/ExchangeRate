@@ -5,10 +5,11 @@ const NAMES = { USD: '美金', JPY: '日圓' };
 
 function RateNumber({ value, currency, variant }) {
   const formatted = formatRate(value, currency);
-  const flip = useFlip(formatted);
+  const { display, prev, flipping } = useFlip(formatted);
   return (
-    <span className={`rate-value rate-value--${variant} num${flip ? ' is-updating' : ''}`}>
-      {formatted}
+    <span className={`rate-value rate-value--${variant} num${flipping ? ' is-flipping' : ''}`}>
+      {flipping && <span className="flip-card flip-card--out" aria-hidden="true">{prev}</span>}
+      <span className="flip-card flip-card--in">{display}</span>
     </span>
   );
 }

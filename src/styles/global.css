@@ -294,26 +294,56 @@ body {
   line-height: 1;
   color: var(--ink);
   display: inline-block;
+  position: relative;
   max-width: 100%;
   overflow-wrap: anywhere;
   margin-top: var(--s-1);
 }
 
+.rate-value.is-flipping {
+  perspective: 400px;
+}
+
+.flip-card {
+  display: inline-block;
+  backface-visibility: hidden;
+}
+
+/* 舊值先往下翻走，露出底下的新值 */
+.flip-card--out {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  transform-origin: center bottom;
+  animation: flip-out 190ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* 新值接著從上方翻入 */
+.is-flipping .flip-card--in {
+  transform-origin: center top;
+  animation: flip-in 230ms cubic-bezier(0.2, 0.8, 0.3, 1) 190ms both;
+}
+
+@keyframes flip-out {
+  0%   { transform: rotateX(0deg);   opacity: 1; }
+  100% { transform: rotateX(-90deg); opacity: 0; }
+}
+
+@keyframes flip-in {
+  0%   { transform: rotateX(90deg); opacity: 0; }
+  100% { transform: rotateX(0deg);  opacity: 1; }
+}
+
 .rate-value--spot { font-size: var(--t-hero); font-weight: 500; }
 .rate-value--cash { font-size: var(--t-lg);   font-weight: 400; color: var(--ink-mid); }
 
-@keyframes flip-in {
-  0%   { transform: rotateX(-90deg); opacity: 0; }
-  100% { transform: rotateX(0);      opacity: 1; }
-}
-
-.rate-value.is-updating {
-  animation: flip-in 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
-  transform-origin: center top;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .rate-value.is-updating { animation: none; }
+  .flip-card--out,
+  .is-flipping .flip-card--in {
+    animation: none;
+  }
+  .flip-card--out { display: none; }
 }
 
 /* ==========================================================================
