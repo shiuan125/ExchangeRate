@@ -11,7 +11,7 @@
 
   --ink:        #16161A;
   --ink-mid:    #55555E;
-  --ink-light:  #8E8E96;
+  --ink-light:  #6D6D76;
 
   --up:         #C8232C;
   --down:       #157A4A;
@@ -33,7 +33,7 @@
 
   --ink:        #EDEDEA;
   --ink-mid:    #A4A4AC;
-  --ink-light:  #6E6E78;
+  --ink-light:  #8C8C96;
 
   --up:         #E8636B;
   --down:       #3FB07E;
@@ -104,9 +104,9 @@ body {
 .eyebrow {
   display: block;
   font-family: var(--font-ui);
-  font-size: var(--t-micro);
+  font-size: var(--t-sm);
   font-weight: 500;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-light);
 }
