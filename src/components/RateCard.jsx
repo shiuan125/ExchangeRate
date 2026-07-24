@@ -1,5 +1,7 @@
 import { useFlip } from '../hooks/useFlip';
+import { useRateHistory } from '../hooks/useRateHistory';
 import { formatRate } from '../utils/format';
+import { computeRateBadge } from '../utils/rateBadge';
 
 const NAMES = { USD: '美金', JPY: '日圓' };
 
@@ -14,7 +16,10 @@ function RateNumber({ value, currency, variant }) {
   );
 }
 
-function RateGroup({ label, buy, sell, currency, variant }) {
+function RateGroup({ label, buy, sell, currency, variant, rows }) {
+  const buyBadge = computeRateBadge(rows, buy, `${variant}Buy`, 'high');
+  const sellBadge = computeRateBadge(rows, sell, `${variant}Sell`, 'low');
+
   return (
     <div className="rate-group">
       <span className="eyebrow">{label}</span>
@@ -23,11 +28,13 @@ function RateGroup({ label, buy, sell, currency, variant }) {
           <span className="eyebrow">買入</span>
           <span className="rate-hint">銀行跟你買</span>
           <div><RateNumber value={buy} currency={currency} variant={variant} /></div>
+          {buyBadge && <span className="rate-badge">{buyBadge}</span>}
         </div>
         <div>
           <span className="eyebrow">賣出</span>
           <span className="rate-hint">銀行賣給你</span>
           <div><RateNumber value={sell} currency={currency} variant={variant} /></div>
+          {sellBadge && <span className="rate-badge">{sellBadge}</span>}
         </div>
       </div>
     </div>
@@ -35,14 +42,16 @@ function RateGroup({ label, buy, sell, currency, variant }) {
 }
 
 export function RateCard({ currency, spot, cash }) {
+  const rows = useRateHistory(currency);
+
   return (
     <div className="card">
       <div className={`card-title card-title--${currency.toLowerCase()}`}>
         <span className="card-code">{currency}</span>
         <span className="card-name">{NAMES[currency]}</span>
       </div>
-      <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} variant="spot" />
-      <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" />
+      <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} variant="spot" rows={rows} />
+      <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" rows={rows} />
     </div>
   );
 }

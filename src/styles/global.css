@@ -286,6 +286,19 @@ body {
   color: var(--ink-light);
 }
 
+.rate-badge {
+  display: inline-block;
+  margin-top: var(--s-2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--stale);
+  background: color-mix(in srgb, var(--stale) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--stale) 35%, transparent);
+}
+
 .rate-value {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
