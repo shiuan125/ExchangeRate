@@ -47,15 +47,15 @@ export function HistoryChart() {
         </div>
       </div>
 
-      {loading ? (
-        <p className="empty-state">載入中…</p>
-      ) : data.length < 2 ? (
-        <div className="empty-state">
-          <p>資料累積中</p>
-          <p className="empty-state-sub">每個交易日自動記錄</p>
-        </div>
-      ) : (
-        <div className="chart-wrap">
+      <div className="chart-wrap">
+        {loading ? (
+          <p className="empty-state">載入中…</p>
+        ) : data.length < 2 ? (
+          <div className="empty-state">
+            <p>資料累積中</p>
+            <p className="empty-state-sub">每個交易日自動記錄</p>
+          </div>
+        ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <CartesianGrid stroke={colors.rule} strokeDasharray="0" vertical={false} />
@@ -80,8 +80,8 @@ export function HistoryChart() {
               <Line type="monotone" dataKey="sell" stroke={colors.up} strokeWidth={1.75} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
