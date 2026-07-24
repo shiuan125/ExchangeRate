@@ -1,19 +1,22 @@
 import { parseBoardTime, minutesSince } from '../utils/boardTime';
 import { isMarketOpen } from '../utils/market';
 
-export function MarketStatus({ boardTime }) {
+export function MarketStatus({ boardTime, fetching }) {
   const open = isMarketOpen();
   const parsed = boardTime ? parseBoardTime(boardTime) : null;
   const stale = open && parsed && minutesSince(parsed.ts) > 15;
 
   let statusClass = 'closed';
-  let label = '已停止更新';
-  if (stale) {
+  let label = '盤後';
+  if (fetching) {
+    statusClass = 'live';
+    label = '更新中';
+  } else if (stale) {
     statusClass = 'stale';
     label = '資料延遲';
   } else if (open) {
     statusClass = 'live';
-    label = '更新中';
+    label = '即時';
   }
 
   const timeLabel = parsed

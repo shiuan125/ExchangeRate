@@ -57,19 +57,21 @@ export function useLiveRate() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const timer = useRef(null);
 
   useEffect(() => {
     let alive = true;
 
     const fetchRate = async () => {
+      if (alive) setFetching(true);
       try {
         const j = shouldUseLiveApi() ? await fetchFromApi() : await fetchFromFirestore();
         if (alive) { setData(j); setError(null); }
       } catch (e) {
         if (alive) setError(e.message);
       } finally {
-        if (alive) setLoading(false);
+        if (alive) { setLoading(false); setFetching(false); }
       }
     };
 
@@ -99,5 +101,5 @@ export function useLiveRate() {
     };
   }, []);
 
-  return { data, error, loading };
+  return { data, error, loading, fetching };
 }

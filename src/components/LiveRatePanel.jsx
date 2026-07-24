@@ -4,14 +4,14 @@ import { RateCard } from './RateCard';
 import { ThemeToggle } from './ThemeToggle';
 
 export function LiveRatePanel() {
-  const { data, error, loading } = useLiveRate();
+  const { data, error, loading, fetching } = useLiveRate();
 
   return (
     <section>
       <header className="header">
         <h1 className="page-title">匯率</h1>
         <div className="header-right">
-          {data && <MarketStatus boardTime={data.boardTime} />}
+          {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}
           <ThemeToggle />
         </div>
       </header>
