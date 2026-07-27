@@ -17,3 +17,14 @@ export function isMarketOpen() {
   const { day, minutes } = taipeiNow();
   return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 931;
 }
+
+/**
+ * 盤後收盤資料是否已同步完成可讀取。
+ * 收盤（15:31）到 GAS 完成同步前有落差，需等到 15:35 才去讀 Firestore 的收盤價；
+ * 非交易日或隔天開盤前，前一交易日的收盤資料早已同步完成，隨時可讀取。
+ */
+export function isClosingDataReady() {
+  const { day, minutes } = taipeiNow();
+  if (day === 0 || day === 6) return true;
+  return minutes >= 935 || minutes < 540;
+}
