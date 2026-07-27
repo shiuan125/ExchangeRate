@@ -24,7 +24,7 @@ export function MarketStatus({ boardTime, fetching }) {
     : '';
 
   return (
-    <div>
+    <div className="market-status">
       <span className="status">
         <span className={`status-dot status-dot--${statusClass}`} />
         {label}

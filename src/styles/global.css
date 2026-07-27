@@ -187,6 +187,10 @@ body {
    MarketStatus
    ========================================================================== */
 
+.market-status {
+  text-align: right;
+}
+
 .status {
   display: inline-flex;
   align-items: center;
