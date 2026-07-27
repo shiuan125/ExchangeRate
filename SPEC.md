@@ -24,9 +24,9 @@
 | 路由 | 不需要 | 單頁應用 |
 | 圖表 | Recharts | 折線圖 |
 | 資料庫 | Google Cloud Firestore | NoSQL，免費額度充足 |
-| 即時 API 代理 | Vercel Serverless Function | 隱藏上游網址、加快取層 |
-| 排程 | GitHub Actions | cron 觸發，寫入 Firestore |
-| 部署 | Vercel | 前端靜態檔 + Function |
+| 即時匯率排程 | Google Apps Script | 定時觸發，直接寫入 Firestore |
+| 每日歸檔排程 | `scripts/sync-rates.js`（手動 / GitHub Actions `workflow_dispatch`） | 寫入 Firestore |
+| 部署 | Vercel | 前端靜態檔 |
 | 樣式 | 純 CSS（CSS Modules 或單一 global.css） | 不引入 UI 框架 |
 
 **不要使用**：Next.js、Tailwind、任何 UI component library、Redux 或其他狀態管理套件。專案規模小，React 內建的 `useState` / `useEffect` 足夠。
@@ -129,7 +129,7 @@ service cloud.firestore {
 }
 ```
 
-前端只讀，寫入一律透過 Admin SDK（GitHub Actions）繞過規則。
+前端只讀，寫入一律透過 Admin SDK（Google Apps Script / `scripts/sync-rates.js`）繞過規則。
 
 ---
 
@@ -138,18 +138,20 @@ service cloud.firestore {
 兩條獨立的資料路徑，**不要混在一起**：
 
 ```
-【即時路徑】更新時段內
-瀏覽器 --輪詢--> /api/rate (Vercel Function) --> Apps Script API
-                     ↓
-              直接回傳，不寫 Firestore
+【即時路徑】更新時段內，每分鐘一次
+Google Apps Script (time-driven trigger) --> Apps Script API --> Firestore 即時匯率文件（覆寫最新一筆）
+                                                                        ↓
+瀏覽器 --輪詢 getDoc--> Firestore 即時匯率文件
 
 【歷史路徑】每日一次
-GitHub Actions (cron) --> Apps Script API --> Firestore (Admin SDK)
-                                                    ↓
+Google Apps Script（或手動執行 scripts/sync-rates.js） --> Apps Script API --> Firestore rates/{currency}_{year}（merge 寫入當日一筆）
+                                                                                        ↓
 瀏覽器 --getDocs (一次性)--> Firestore --> 繪製折線圖
+
+備援：.github/workflows/sync.yml 保留 workflow_dispatch，可手動觸發歷史路徑的寫入。
 ```
 
-**關鍵設計決策**：即時路徑**絕對不寫入 Firestore**。更新時段內每分鐘輪詢，若每次都寫會產生大量雜訊資料，歷史圖表變得難以處理，也會浪費寫入配額。歷史資料只保留每日最後一筆。
+**關鍵設計決策**：即時路徑只覆寫單一文件，**不累積每分鐘的歷史紀錄**。若每次輪詢都寫入新文件會產生大量雜訊資料，歷史圖表變得難以處理，也會浪費寫入配額。歷史資料只保留每日最後一筆（`rates/{currency}_{year}`）。
 
 ---
 
@@ -157,10 +159,8 @@ GitHub Actions (cron) --> Apps Script API --> Firestore (Admin SDK)
 
 ```
 /
-├── api/
-│   └── rate.js                 # Vercel Serverless Function
 ├── scripts/
-│   └── sync-rates.js           # GitHub Actions 執行的寫入腳本
+│   └── sync-rates.js           # 每日歸檔寫入腳本（GAS 排程 / 手動執行）
 ├── src/
 │   ├── main.jsx
 │   ├── App.jsx
@@ -242,54 +242,34 @@ function taipeiNow() {
 
 export function isMarketOpen() {
   const { day, minutes } = taipeiNow();
-  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 930;
+  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 931;
 }
 ```
 
 **已知限制**：無法判斷國定假日。非營業日 API 會回傳前一交易日的值，前端靠 `boardTime` 顯示「最後更新於 X」即可，不需要額外處理。
 
-### 6.3 `api/rate.js` — Vercel Serverless Function
+### 6.3 `src/hooks/useLiveRate.js`
 
-```javascript
-export default async function handler(req, res) {
-  const url = process.env.RATE_API_URL;
-  if (!url) return res.status(500).json({ error: 'RATE_API_URL not configured' });
-
-  try {
-    const upstream = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!upstream.ok) throw new Error(`upstream ${upstream.status}`);
-    const d = await upstream.json();
-
-    // Edge 快取 60 秒；上游失敗時回舊值最多 5 分鐘
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-    res.status(200).json({
-      boardTime: d.boardTime,
-      usd: {
-        cash: { buy: +d.usdcashbuyRate,   sell: +d.usdcashsellRate },
-        spot: { buy: +d.usddigitsbuyRate, sell: +d.usddigitssellRate },
-      },
-      jpy: {
-        cash: { buy: +d.jpycashbuyRate,   sell: +d.jpycashsellRate },
-        spot: { buy: +d.jpydigitsbuyRate, sell: +d.jpydigitssellRate },
-      },
-      fetchedAt: new Date().toISOString(),
-    });
-  } catch (e) {
-    res.status(502).json({ error: 'upstream failed', detail: String(e) });
-  }
-}
-```
-
-**重點**：
-- `s-maxage=60` 讓 Vercel Edge 快取一分鐘。十個使用者同時開站，上游只被打一次。
-- `stale-while-revalidate=300` 是保險：上游掛掉時先回舊值，背景重試，使用者不會看到空白。
-- 上游網址存在 `RATE_API_URL`，**不會出現在前端 bundle**。
-
-### 6.4 `src/hooks/useLiveRate.js`
+即時匯率**不再透過 Vercel Function 打上游 API**，改為直接讀 Google Apps Script 排程寫入的 Firestore 文件：
 
 ```javascript
 import { useState, useEffect, useRef } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { isMarketOpen } from '../utils/market';
+
+// fetchFromFirestore()：收盤後改讀 rates/{currency}_{year} 最新一筆，實作見 src/hooks/useLiveRate.js
+async function fetchFromRealtime() {
+  const snap = await getDoc(doc(db, /* 即時匯率的 collection/doc，實作見 src/hooks/useLiveRate.js */));
+  if (!snap.exists()) throw new Error('Firestore 尚無即時資料');
+  const d = snap.data();
+  return {
+    boardTime: d.boardTime,
+    usd: { cash: { buy: +d.usdcashbuyRate, sell: +d.usdcashsellRate }, spot: { buy: +d.usddigitsbuyRate, sell: +d.usddigitssellRate } },
+    jpy: { cash: { buy: +d.jpycashbuyRate, sell: +d.jpycashsellRate }, spot: { buy: +d.jpydigitsbuyRate, sell: +d.jpydigitssellRate } },
+    fetchedAt: new Date().toISOString(),
+  };
+}
 
 export function useLiveRate() {
   const [data, setData] = useState(null);
@@ -302,9 +282,7 @@ export function useLiveRate() {
 
     const fetchRate = async () => {
       try {
-        const r = await fetch('/api/rate');
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j = await r.json();
+        const j = isMarketOpen() ? await fetchFromRealtime() : await fetchFromFirestore();
         if (alive) { setData(j); setError(null); }
       } catch (e) {
         if (alive) setError(e.message);
@@ -315,11 +293,11 @@ export function useLiveRate() {
 
     const schedule = () => {
       clearInterval(timer.current);
-      // 更新時段內 60 秒輪詢；時段外 10 分鐘一次即可
-      const interval = isMarketOpen() ? 60_000 : 600_000;
+      // 更新時段內每分鐘輪詢 Firestore；時段外不需要輪詢
+      if (!isMarketOpen()) return;
       timer.current = setInterval(() => {
         if (document.visibilityState === 'visible') fetchRate();
-      }, interval);
+      }, 60_000);
     };
 
     fetchRate();
@@ -595,37 +573,36 @@ Repository → Settings → Secrets and variables → Actions：
 4. 確認 `npm run dev` 可跑
 
 ### 階段二：即時匯率
-5. 寫 `api/rate.js`
-6. 本機用 `vercel dev` 測試 Function（`npx vercel dev`，`npm run dev` 不會啟動 `api/`）
-7. 寫 `utils/boardTime.js`、`utils/market.js`
-8. 寫 `useLiveRate` hook
-9. 寫 `MarketStatus`、`RateCard`、`LiveRatePanel`
-10. 驗收：頁面顯示四組數字與報價時間，60 秒自動更新
+5. 設定 Google Apps Script 排程，寫入 Firestore 即時匯率文件
+6. 寫 `utils/boardTime.js`、`utils/market.js`
+7. 寫 `useLiveRate` hook
+8. 寫 `MarketStatus`、`RateCard`、`LiveRatePanel`
+9. 驗收：頁面顯示四組數字與報價時間，60 秒自動更新
 
 ### 階段三：資料庫與排程
-11. 建立 Firebase 專案、開啟 Firestore、部署 `firestore.rules`
-12. 寫 `scripts/sync-rates.js`
-13. 本機測試：`RATE_API_URL=... FIREBASE_SERVICE_ACCOUNT='...' node scripts/sync-rates.js`
-14. 確認 Firestore Console 出現正確文檔
-15. 寫 `.github/workflows/sync.yml`，設定 Secrets，用 `workflow_dispatch` 手動觸發驗證
+10. 建立 Firebase 專案、開啟 Firestore、部署 `firestore.rules`
+11. 寫 `scripts/sync-rates.js`
+12. 本機測試：`RATE_API_URL=... FIREBASE_SERVICE_ACCOUNT='...' node scripts/sync-rates.js`
+13. 確認 Firestore Console 出現正確文檔
+14. 寫 `.github/workflows/sync.yml`，設定 Secrets，用 `workflow_dispatch` 手動觸發驗證
 
 ### 階段四：歷史圖表
-16. 寫 `firebase.js`、`useHistory` hook
-17. 寫 `HistoryChart`，含即期/現金切換與幣別切換
-18. 驗收：圖表正確渲染，切換即時反應
+15. 寫 `firebase.js`、`useHistory` hook
+16. 寫 `HistoryChart`，含即期/現金切換與幣別切換
+17. 驗收：圖表正確渲染，切換即時反應
 
 ### 階段五：部署
-19. push 到 GitHub，Vercel 匯入專案
-20. 設定 Vercel 環境變數
-21. 部署後驗證 `/api/rate` 可正常回應
-22. 觀察數日，確認排程穩定寫入
+18. push 到 GitHub，Vercel 匯入專案
+19. 設定 Vercel 環境變數
+20. 部署後驗證前端能正確讀到 Firestore 的即時匯率文件
+21. 觀察數日，確認排程穩定寫入
 
 ---
 
 ## 9. 驗收清單
 
 **功能**
-- [ ] 更新時段內每 60 秒自動更新，時段外降為 10 分鐘
+- [ ] 更新時段內每 60 秒自動更新，時段外不輪詢
 - [ ] 分頁切到背景時停止輪詢
 - [ ] 四組匯率（USD/JPY × 現金/即期 × 買入/賣出）全部正確顯示
 - [ ] 顯示 `boardTime`，且更新時段內資料停滯超過 15 分鐘會提示

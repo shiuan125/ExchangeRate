@@ -6,12 +6,11 @@
 
 ```bash
 npm install
-cp .env.example .env   # 填入 Firebase 設定與 RATE_API_URL
-npm run dev             # 前端（不含 /api）
-npx vercel dev           # 含 /api/rate 的完整本機環境
+cp .env.example .env   # 填入 Firebase 設定
+npm run dev
 ```
 
-## 手動測試排程腳本
+## 手動測試同步腳本
 
 ```bash
 RATE_API_URL=... FIREBASE_SERVICE_ACCOUNT='...' node scripts/sync-rates.js
@@ -19,6 +18,7 @@ RATE_API_URL=... FIREBASE_SERVICE_ACCOUNT='...' node scripts/sync-rates.js
 
 ## 部署
 
-- 前端 + Function：Vercel（設定 `VITE_FIREBASE_*` 與 `RATE_API_URL` 環境變數）
-- 排程：GitHub Actions（`.github/workflows/sync.yml`，設定 `RATE_API_URL` 與 `FIREBASE_SERVICE_ACCOUNT` Secrets）
+- 前端：Vercel（設定 `VITE_FIREBASE_*` 環境變數）
+- 即時匯率：Google Apps Script 排程寫入 Firestore（前端直接讀取，不再打外部 API）
+- 每日收盤同步：`scripts/sync-rates.js`，寫入 `rates/{currency}_{year}`；`.github/workflows/sync.yml` 保留為手動觸發（`workflow_dispatch`）備用
 - 資料庫：Google Cloud Firestore（部署 `firestore.rules`）

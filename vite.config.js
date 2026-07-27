@@ -28,17 +28,6 @@ export default defineConfig({
         navigateFallback: '/index.html',
         runtimeCaching: [
           {
-            // 即時匯率：優先打網路，離線時退回上一次成功結果
-            urlPattern: ({ url }) => url.pathname === '/api/rate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'live-rate',
-              networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts-stylesheets' },
