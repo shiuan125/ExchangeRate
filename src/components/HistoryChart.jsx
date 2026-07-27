@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { useHistory } from '../hooks/useHistory';
 import { useChartColors } from '../hooks/useChartColors';
@@ -8,12 +8,14 @@ import { formatRate } from '../utils/format';
 
 function CustomTooltip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
+  // 賣出排在買入上面，跟圖表線條與圖例順序一致
+  const sorted = [...payload].sort((a) => (a.dataKey === 'sell' ? -1 : 1));
   return (
     <div className="chart-tooltip">
       <div className="chart-tooltip-date num">{label}</div>
-      {payload.map((p) => (
+      {sorted.map((p) => (
         <div key={p.dataKey} className="chart-tooltip-row">
-          <span className="eyebrow">{p.dataKey === 'buy' ? '買入' : '賣出'}</span>
+          <span className="eyebrow" style={{ color: p.color }}>{p.dataKey === 'buy' ? '買入' : '賣出'}</span>
           <span className="num">{formatRate(p.value, currency)}</span>
         </div>
       ))}
@@ -76,6 +78,16 @@ export function HistoryChart() {
                 tickFormatter={(v) => v.toFixed(currency === 'JPY' ? 4 : 2)}
               />
               <Tooltip content={<CustomTooltip currency={currency} />} />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                height={28}
+                payload={[
+                  { value: '賣出', type: 'line', color: colors.up },
+                  { value: '買入', type: 'line', color: colors.down },
+                ]}
+                formatter={(value) => <span style={{ color: colors.inkLight }}>{value}</span>}
+              />
               <Line type="monotone" dataKey="buy" stroke={colors.down} strokeWidth={1.75} dot={false} />
               <Line type="monotone" dataKey="sell" stroke={colors.up} strokeWidth={1.75} dot={false} />
             </LineChart>
