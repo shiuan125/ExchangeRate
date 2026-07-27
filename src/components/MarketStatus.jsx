@@ -1,14 +1,19 @@
 import { parseBoardTime, minutesSince } from '../utils/boardTime';
 import { isMarketOpen } from '../utils/market';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 export function MarketStatus({ boardTime, fetching }) {
+  const online = useOnlineStatus();
   const open = isMarketOpen();
   const parsed = boardTime ? parseBoardTime(boardTime) : null;
   const stale = open && parsed && minutesSince(parsed.ts) > 15;
 
   let statusClass = 'closed';
   let label = '盤後';
-  if (fetching) {
+  if (!online) {
+    statusClass = 'offline';
+    label = '網路中斷';
+  } else if (fetching) {
     statusClass = 'live';
     label = '更新中';
   } else if (stale) {

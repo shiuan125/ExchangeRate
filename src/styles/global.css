@@ -210,8 +210,9 @@ body {
   background: var(--live);
   animation: pulse 2.4s ease-in-out infinite;
 }
-.status-dot--closed { background: var(--closed); }
-.status-dot--stale  { background: var(--stale); }
+.status-dot--closed  { background: var(--closed); }
+.status-dot--stale   { background: var(--stale); }
+.status-dot--offline { background: var(--up); }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
