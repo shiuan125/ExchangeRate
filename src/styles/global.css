@@ -299,6 +299,15 @@ body {
   border: 1px solid color-mix(in srgb, var(--stale) 35%, transparent);
 }
 
+.rate-change {
+  display: inline-block;
+  margin-left: var(--s-1);
+  font-size: var(--t-micro);
+}
+
+.rate-change--up   { color: var(--up); }
+.rate-change--down { color: var(--down); }
+
 .rate-value {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;

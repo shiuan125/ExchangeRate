@@ -1,17 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { isMarketOpen, isSyncPending } from '../utils/market';
+import { isMarketOpen } from '../utils/market';
 
-/** 開盤中，或收盤後 Firestore 同步尚未完成：都要直接打 API 才拿得到最新報價 */
-function shouldUseLiveApi() {
-  return isMarketOpen() || isSyncPending();
-}
+/** 即時報價：GAS 定時寫入的 cathaybk/realtime，不再直接打外部匯率 API */
+async function fetchFromRealtime() {
+  const snap = await getDoc(doc(db, 'cathaybk', 'realtime'));
+  if (!snap.exists()) throw new Error('Firestore 尚無即時資料');
+  const d = snap.data();
 
-async function fetchFromApi() {
-  const r = await fetch('/api/rate');
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  return {
+    boardTime: d.boardTime,
+    usd: {
+      cash: { buy: +d.usdcashbuyRate, sell: +d.usdcashsellRate },
+      spot: { buy: +d.usddigitsbuyRate, sell: +d.usddigitssellRate },
+    },
+    jpy: {
+      cash: { buy: +d.jpycashbuyRate, sell: +d.jpycashsellRate },
+      spot: { buy: +d.jpydigitsbuyRate, sell: +d.jpydigitssellRate },
+    },
+    fetchedAt: new Date().toISOString(),
+  };
 }
 
 /** 取得目前台北時間所屬年份 */
@@ -66,7 +75,7 @@ export function useLiveRate() {
     const fetchRate = async () => {
       if (alive) setFetching(true);
       try {
-        const j = shouldUseLiveApi() ? await fetchFromApi() : await fetchFromFirestore();
+        const j = isMarketOpen() ? await fetchFromRealtime() : await fetchFromFirestore();
         if (alive) { setData(j); setError(null); }
       } catch (e) {
         if (alive) setError(e.message);
@@ -77,9 +86,8 @@ export function useLiveRate() {
 
     const schedule = () => {
       clearInterval(timer.current);
-      // 完全休市時資料一天只同步一次，不需要輪詢；等分頁重新可見時再補抓
-      // 收盤後的同步空窗期（isSyncPending）仍要輪詢 API，才能追到今天最後一筆報價
-      if (!shouldUseLiveApi()) return;
+      // 收盤後資料一天只同步一次，不需要輪詢；等分頁重新可見時再補抓
+      if (!isMarketOpen()) return;
       timer.current = setInterval(() => {
         if (document.visibilityState === 'visible') fetchRate();
       }, 60_000);

@@ -1,9 +1,6 @@
 name: Sync Exchange Rates
 
 on:
-  schedule:
-    # 台北時間 15:40（更新時段結束後 10 分鐘）= UTC 07:40，週一至週五
-    - cron: '40 7 * * 1-5'
   workflow_dispatch:
 
 jobs:
