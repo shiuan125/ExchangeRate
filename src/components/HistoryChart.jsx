@@ -2,9 +2,17 @@ import { useState, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { useHistory } from '../hooks/useHistory';
+import { useRateHistory } from '../hooks/useRateHistory';
 import { useChartColors } from '../hooks/useChartColors';
 import { formatRate } from '../utils/format';
+import { dateKeyDaysAgo } from '../utils/date';
+
+const RANGES = [
+  { value: '7d', label: '7天', days: 7 },
+  { value: '1m', label: '1月', days: 30 },
+  { value: '3m', label: '3月', days: 90 },
+  { value: '1y', label: '1年', days: 365 },
+];
 
 function CustomTooltip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
@@ -26,14 +34,21 @@ function CustomTooltip({ active, payload, label, currency }) {
 export function HistoryChart() {
   const [mode, setMode] = useState('spot');
   const [currency, setCurrency] = useState('USD');
-  const { rows, loading } = useHistory(currency);
+  const [range, setRange] = useState('1m');
+  const { rows, loading } = useRateHistory(currency);
   const colors = useChartColors();
 
-  const data = useMemo(() => rows.map((r) => ({
-    date: r.date,
-    buy: mode === 'spot' ? r.spotBuy : r.cashBuy,
-    sell: mode === 'spot' ? r.spotSell : r.cashSell,
-  })), [rows, mode]);
+  const data = useMemo(() => {
+    const days = RANGES.find((r) => r.value === range)?.days ?? 30;
+    const cutoff = dateKeyDaysAgo(days - 1);
+    return rows
+      .filter((r) => r.date >= cutoff)
+      .map((r) => ({
+        date: r.date,
+        buy: mode === 'spot' ? r.spotBuy : r.cashBuy,
+        sell: mode === 'spot' ? r.spotSell : r.cashSell,
+      }));
+  }, [rows, mode, range]);
 
   return (
     <section>
@@ -46,6 +61,13 @@ export function HistoryChart() {
         <div className="segment" role="group" aria-label="幣別">
           <button type="button" aria-pressed={currency === 'USD'} onClick={() => setCurrency('USD')}>USD</button>
           <button type="button" aria-pressed={currency === 'JPY'} onClick={() => setCurrency('JPY')}>JPY</button>
+        </div>
+      </div>
+      <div className="chart-controls chart-controls--range">
+        <div className="segment" role="group" aria-label="時間範圍">
+          {RANGES.map((r) => (
+            <button key={r.value} type="button" aria-pressed={range === r.value} onClick={() => setRange(r.value)}>{r.label}</button>
+          ))}
         </div>
       </div>
 

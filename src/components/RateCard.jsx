@@ -60,7 +60,7 @@ function RateGroup({ label, buy, sell, currency, variant, rows, prevRow }) {
 }
 
 export function RateCard({ currency, spot, cash }) {
-  const rows = useRateHistory(currency);
+  const { rows } = useRateHistory(currency);
   // 前次盤後收盤價：排除今天（今天收盤同步後才會出現在 rows 裡）
   const today = taipeiToday();
   const prevRow = [...rows].reverse().find((r) => r.date < today);

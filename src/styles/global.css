@@ -437,6 +437,10 @@ body {
   margin-bottom: var(--s-4);
 }
 
+.chart-controls--range {
+  justify-content: flex-end;
+}
+
 .chart-wrap {
   height: 320px;
   display: flex;
