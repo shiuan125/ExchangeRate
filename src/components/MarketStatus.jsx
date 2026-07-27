@@ -20,7 +20,7 @@ export function MarketStatus({ boardTime, fetching }) {
   }
 
   const timeLabel = parsed
-    ? (open ? `報價時間 ${boardTime.slice(-8)}` : `最後報價 ${boardTime.slice(-8, -3)}`)
+    ? (open ? `報價時間 ${boardTime}` : `最後報價 ${boardTime.slice(0, -3)}`)
     : '';
 
   return (
