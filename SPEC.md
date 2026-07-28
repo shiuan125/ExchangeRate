@@ -223,7 +223,7 @@ export function minutesSince(ts) {
 
 ### 6.2 `src/utils/market.js`
 
-報價更新時間：**週一至週五 09:00–15:30（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
+報價更新時間：**週一至週五 09:00–16:00（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
 
 ```javascript
 /** 取得當前台北時間的 { day, minutes } */
@@ -242,7 +242,7 @@ function taipeiNow() {
 
 export function isMarketOpen() {
   const { day, minutes } = taipeiNow();
-  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 931;
+  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 960;
 }
 ```
 

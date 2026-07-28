@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { isMarketOpen, isClosingDataReady } from '../utils/market';
+import { isMarketOpen } from '../utils/market';
 
 /** 即時報價：GAS 定時寫入的 cathaybk/realtime，不再直接打外部匯率 API */
 async function fetchFromRealtime() {
@@ -72,15 +72,10 @@ export function useLiveRate() {
   useEffect(() => {
     let alive = true;
 
-    const fetchRate = async () => {
-      const marketOpen = isMarketOpen();
-      if (!marketOpen && !isClosingDataReady()) {
-        // 收盤後到 15:35 前，GAS 尚未同步完成收盤價，暫不讀取，維持現有資料
-        return;
-      }
+    const runFetch = async (source) => {
       if (alive) setFetching(true);
       try {
-        const j = marketOpen ? await fetchFromRealtime() : await fetchFromFirestore();
+        const j = await source();
         if (alive) { setData(j); setError(null); }
       } catch (e) {
         if (alive) setError(e.message);
@@ -89,20 +84,18 @@ export function useLiveRate() {
       }
     };
 
+    const fetchRate = async () => {
+      const marketOpen = isMarketOpen();
+      if (marketOpen) return runFetch(fetchFromRealtime);
+      return runFetch(fetchFromFirestore);
+    };
+
     const schedule = () => {
       clearInterval(timer.current);
       if (isMarketOpen()) {
         timer.current = setInterval(() => {
           if (document.visibilityState === 'visible') fetchRate();
         }, 60_000);
-        return;
-      }
-      if (!isClosingDataReady()) {
-        // 尚未到 15:35，短間隔重試直到收盤資料同步完成
-        timer.current = setInterval(() => {
-          if (document.visibilityState === 'visible') fetchRate();
-          if (isClosingDataReady()) schedule();
-        }, 30_000);
         return;
       }
       // 收盤後資料一天只同步一次，不需要輪詢；等分頁重新可見時再補抓
