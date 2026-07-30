@@ -26,6 +26,7 @@ export function LiveRatePanel() {
           <div className="rate-cards">
             <RateCard currency="USD" spot={data.usd.spot} cash={data.usd.cash} />
             <RateCard currency="JPY" spot={data.jpy.spot} cash={data.jpy.cash} />
+            {data.gbp && <RateCard currency="GBP" spot={data.gbp.spot} />}
           </div>
         </>
       )}

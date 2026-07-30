@@ -23,6 +23,7 @@
 
   --usd:        #1E3A5F;
   --jpy:        #7A2E3A;
+  --gbp:        #2E5C3A;
 }
 
 [data-theme="dark"] {
@@ -45,6 +46,7 @@
 
   --usd:        #6E9BD1;
   --jpy:        #CF8592;
+  --gbp:        #7FBF8E;
 }
 
 [data-theme="light"] { color-scheme: light; }
@@ -255,6 +257,10 @@ body {
   border-left-color: var(--jpy);
 }
 
+.card-title--gbp {
+  border-left-color: var(--gbp);
+}
+
 .card-code {
   font-family: var(--font-num);
   font-size: var(--t-md);
@@ -403,6 +409,11 @@ body {
   background: var(--board);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.segment button:disabled {
+  color: var(--rule-bold);
+  cursor: not-allowed;
 }
 
 .segment--theme button {

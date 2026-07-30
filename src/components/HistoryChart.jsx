@@ -37,6 +37,12 @@ export function HistoryChart() {
   const [range, setRange] = useState('1m');
   const { rows, loading } = useRateHistory(currency);
   const colors = useChartColors();
+  const hasCash = currency !== 'GBP';
+
+  const selectCurrency = (c) => {
+    setCurrency(c);
+    if (c === 'GBP') setMode('spot');
+  };
 
   const data = useMemo(() => {
     const days = RANGES.find((r) => r.value === range)?.days ?? 30;
@@ -56,11 +62,12 @@ export function HistoryChart() {
       <div className="chart-controls">
         <div className="segment" role="group" aria-label="報價模式">
           <button type="button" aria-pressed={mode === 'spot'} onClick={() => setMode('spot')}>即期</button>
-          <button type="button" aria-pressed={mode === 'cash'} onClick={() => setMode('cash')}>現金</button>
+          <button type="button" aria-pressed={mode === 'cash'} disabled={!hasCash} onClick={() => setMode('cash')}>現金</button>
         </div>
         <div className="segment" role="group" aria-label="幣別">
-          <button type="button" aria-pressed={currency === 'USD'} onClick={() => setCurrency('USD')}>USD</button>
-          <button type="button" aria-pressed={currency === 'JPY'} onClick={() => setCurrency('JPY')}>JPY</button>
+          <button type="button" aria-pressed={currency === 'USD'} onClick={() => selectCurrency('USD')}>USD</button>
+          <button type="button" aria-pressed={currency === 'JPY'} onClick={() => selectCurrency('JPY')}>JPY</button>
+          <button type="button" aria-pressed={currency === 'GBP'} onClick={() => selectCurrency('GBP')}>GBP</button>
         </div>
       </div>
       <div className="chart-controls chart-controls--range">

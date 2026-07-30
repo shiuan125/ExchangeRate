@@ -19,6 +19,10 @@ async function fetchFromRealtime() {
       cash: { buy: +d.jpycashbuyRate, sell: +d.jpycashsellRate },
       spot: { buy: +d.jpydigitsbuyRate, sell: +d.jpydigitssellRate },
     },
+    // 英鎊只有即期，沒有現金
+    gbp: {
+      spot: { buy: +d.gbpdigitsbuyRate, sell: +d.gbpdigitssellRate },
+    },
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -42,9 +46,10 @@ async function fetchLatestFromFirestore(currency, year) {
 /** 盤後直接讀 Firestore 已同步的收盤價，不再打外部匯率 API */
 async function fetchFromFirestore() {
   const year = taipeiYear();
-  const [usd, jpy] = await Promise.all([
+  const [usd, jpy, gbp] = await Promise.all([
     fetchLatestFromFirestore('USD', year),
     fetchLatestFromFirestore('JPY', year),
+    fetchLatestFromFirestore('GBP', year),
   ]);
   if (!usd || !jpy) throw new Error('Firestore 尚無同步資料');
 
@@ -58,6 +63,7 @@ async function fetchFromFirestore() {
       cash: { buy: jpy.cashBuy, sell: jpy.cashSell },
       spot: { buy: jpy.spotBuy, sell: jpy.spotSell },
     },
+    gbp: gbp ? { spot: { buy: gbp.spotBuy, sell: gbp.spotSell } } : null,
     fetchedAt: new Date().toISOString(),
   };
 }

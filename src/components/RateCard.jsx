@@ -4,7 +4,7 @@ import { formatRate } from '../utils/format';
 import { computeRateBadge } from '../utils/rateBadge';
 import { taipeiToday } from '../utils/date';
 
-const NAMES = { USD: '美金', JPY: '日圓' };
+const NAMES = { USD: '美金', JPY: '日圓', GBP: '英鎊' };
 
 function RateNumber({ value, currency, variant }) {
   const formatted = formatRate(value, currency);
@@ -72,7 +72,7 @@ export function RateCard({ currency, spot, cash }) {
         <span className="card-name">{NAMES[currency]}</span>
       </div>
       <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} variant="spot" rows={rows} prevRow={prevRow} />
-      <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" rows={rows} prevRow={prevRow} />
+      {cash && <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" rows={rows} prevRow={prevRow} />}
     </div>
   );
 }

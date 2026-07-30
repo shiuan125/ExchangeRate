@@ -46,17 +46,26 @@ async function main() {
       cashBuy: +d.jpycashbuyRate, cashSell: +d.jpycashsellRate,
       spotBuy: +d.jpydigitsbuyRate, spotSell: +d.jpydigitssellRate,
     },
+    // 英鎊只有即期，沒有現金
+    GBP: {
+      boardTime: d.boardTime,
+      spotBuy: +d.gbpdigitsbuyRate, spotSell: +d.gbpdigitssellRate,
+    },
   };
 
   // 防呆二：數值合理性檢查
   for (const [cur, v] of Object.entries(payload)) {
-    for (const k of ['cashBuy', 'cashSell', 'spotBuy', 'spotSell']) {
+    const fields = cur === 'GBP' ? ['spotBuy', 'spotSell'] : ['cashBuy', 'cashSell', 'spotBuy', 'spotSell'];
+    for (const k of fields) {
       if (!Number.isFinite(v[k]) || v[k] <= 0) {
         throw new Error(`${cur}.${k} 數值異常: ${v[k]}`);
       }
     }
-    if (v.cashSell <= v.cashBuy || v.spotSell <= v.spotBuy) {
-      throw new Error(`${cur} 買賣價邏輯異常`);
+    if (v.spotSell <= v.spotBuy) {
+      throw new Error(`${cur} 即期買賣價邏輯異常`);
+    }
+    if (cur !== 'GBP' && v.cashSell <= v.cashBuy) {
+      throw new Error(`${cur} 現金買賣價邏輯異常`);
     }
   }
 
