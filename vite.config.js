@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: '匯率查詢站',
         short_name: '匯率查詢',
-        description: '查詢美金（USD）與日圓（JPY）即時匯率與歷史走勢',
+        description: '查詢美金（USD）、日圓（JPY）與英鎊（GBP）即時匯率與歷史走勢',
         lang: 'zh-TW',
         start_url: '/',
         display: 'standalone',
