@@ -615,3 +615,16 @@ body {
   width: 40px;
   height: 40px;
 }
+
+/* 手機寬度下數字放到最大會擠不下兩欄，改成上下堆疊避免換行 */
+@media (max-width: 768px) {
+  [data-elder="true"] .rate-pair {
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+  }
+
+  [data-elder="true"] .rate-pair > div + div {
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--rule);
+  }
+}
