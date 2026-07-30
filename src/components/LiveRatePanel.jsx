@@ -2,6 +2,7 @@ import { useLiveRate } from '../hooks/useLiveRate';
 import { MarketStatus } from './MarketStatus';
 import { RateCard } from './RateCard';
 import { ThemeToggle } from './ThemeToggle';
+import { ElderModeToggle } from './ElderModeToggle';
 
 export function LiveRatePanel() {
   const { data, error, loading, fetching } = useLiveRate();
@@ -12,7 +13,10 @@ export function LiveRatePanel() {
         <h1 className="page-title">匯率</h1>
         <div className="header-right">
           {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}
-          <ThemeToggle />
+          <div className="header-controls">
+            <ElderModeToggle />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

@@ -425,6 +425,36 @@ body {
   height: 30px;
 }
 
+.header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.elder-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  color: var(--ink-light);
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.elder-toggle[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -518,4 +548,70 @@ body {
   .chart-wrap {
     height: 260px;
   }
+}
+
+/* ==========================================================================
+   大字模式（老人模式）—— 放大字級、加強對比，方便長輩閱讀
+   ========================================================================== */
+
+[data-elder="true"] {
+  --t-hero:   clamp(3.25rem, 13vw, 5rem);
+  --t-lg:     clamp(2rem, 6vw, 2.5rem);
+  --t-md:     1.375rem;
+  --t-sm:     1.125rem;
+  --t-xs:     1rem;
+  --t-micro:  0.875rem;
+
+  --s-3: 14px;
+  --s-4: 20px;
+  --s-5: 30px;
+}
+
+[data-theme="light"][data-elder="true"] {
+  --ink:        #000000;
+  --ink-mid:    #2A2A2E;
+  --ink-light:  #45454C;
+  --rule:       #B8B8B0;
+  --rule-bold:  #96968C;
+  --up:         #B4001E;
+  --down:       #007A3D;
+}
+
+[data-theme="dark"][data-elder="true"] {
+  --ink:        #FFFFFF;
+  --ink-mid:    #E2E2E0;
+  --ink-light:  #C6C6CC;
+  --rule:       #3E3E46;
+  --rule-bold:  #55555F;
+  --up:         #FF7A82;
+  --down:       #4FD696;
+}
+
+[data-elder="true"] .card {
+  border-width: 2px;
+}
+
+[data-elder="true"] .card-title {
+  border-left-width: 5px;
+}
+
+[data-elder="true"] .rate-value--cash {
+  color: var(--ink);
+}
+
+[data-elder="true"] .rate-hint {
+  display: none;
+}
+
+[data-elder="true"] .segment button,
+[data-elder="true"] .elder-toggle,
+[data-elder="true"] .segment--theme button {
+  padding-top: var(--s-3);
+  padding-bottom: var(--s-3);
+}
+
+[data-elder="true"] .segment--theme button,
+[data-elder="true"] .elder-toggle {
+  width: 40px;
+  height: 40px;
 }
