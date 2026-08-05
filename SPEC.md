@@ -593,6 +593,8 @@ async function fetchYearCalendar(year) {
       const list = await res.json();
       const data = {};
       for (const item of list) {
+        // isHoliday 不是布林值就跳過這筆，避免 undefined 寫入 Firestore 導致整份寫入失敗
+        if (typeof item.isHoliday !== 'boolean') continue;
         data[`${item.date.slice(0,4)}-${item.date.slice(4,6)}-${item.date.slice(6,8)}`] = item.isHoliday;
       }
       return data;
@@ -602,9 +604,15 @@ async function fetchYearCalendar(year) {
 }
 
 async function main() {
-  const year = taipeiDateKey().slice(0, 4);
+  const todayKey = taipeiDateKey();
+  const year = todayKey.slice(0, 4);
   const data = await fetchYearCalendar(year);
-  if (!data) throw new Error(`TaiwanCalendar ${year} 年度資料抓取失敗`);
+
+  // 防呆：資料筆數異常或缺漏今天的資料就拒絕覆寫，避免用近乎空的資料蓋掉 Firestore 裡既有的正確行事曆
+  const count = data ? Object.keys(data).length : 0;
+  if (!data || count < 300 || typeof data[todayKey] !== 'boolean') {
+    throw new Error(`TaiwanCalendar ${year} 資料異常：共 ${count} 筆`);
+  }
 
   await db.collection('calendar').doc(year).set({ data, updatedAt: new Date().toISOString() });
 }
@@ -622,7 +630,7 @@ on:
     - cron: '10 16 * * *'
 ```
 
-**已知限制**：抓取失敗（jsDelivr、raw.githubusercontent 都失敗）會讓這次 Action 執行失敗（拋錯、exit code 非 0），但**不會覆寫 Firestore 裡既有的資料**——前端與 `sync-rates.js` 還是讀得到前一天同步的版本，只是當天若剛好是新的國定假日調整（例如颱風臨時補班公告），會晚一天才反映。
+**已知限制**：抓取失敗、資料筆數異常、或缺漏今天的資料（jsDelivr、raw.githubusercontent 都失敗，或上游資料格式異常）都會讓這次 Action 執行失敗（拋錯、exit code 非 0），但**不會覆寫 Firestore 裡既有的資料**——前端與 `sync-rates.js` 還是讀得到前一天同步的版本，只是當天若剛好是新的國定假日調整（例如颱風臨時補班公告），會晚一天才反映。
 
 ---
 

@@ -43,9 +43,15 @@ async function fetchYearCalendar(year) {
 }
 
 async function main() {
-  const year = taipeiDateKey().slice(0, 4);
+  const todayKey = taipeiDateKey();
+  const year = todayKey.slice(0, 4);
   const data = await fetchYearCalendar(year);
-  if (!data) throw new Error(`TaiwanCalendar ${year} 年度資料抓取失敗（jsDelivr、raw.githubusercontent 都失敗）`);
+
+  // 防呆：資料筆數異常或缺漏今天的資料就拒絕覆寫，避免用近乎空的資料蓋掉 Firestore 裡既有的正確行事曆
+  const count = data ? Object.keys(data).length : 0;
+  if (!data || count < 300 || typeof data[todayKey] !== 'boolean') {
+    throw new Error(`TaiwanCalendar ${year} 資料異常：共 ${count} 筆，今天（${todayKey}）${data?.[todayKey] === undefined ? '缺漏' : '型別異常'}`);
+  }
 
   await db.collection('calendar').doc(year).set({
     data,
