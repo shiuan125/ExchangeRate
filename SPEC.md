@@ -307,7 +307,7 @@ export function useLiveRate() {
       if (!isMarketOpen()) return; // 時段外不需要輪詢
       timer.current = setTimeout(async () => {
         if (document.visibilityState === 'visible') await fetchRate();
-        schedule();
+        if (alive) schedule(); // 避免 unmount 後（fetchRate 期間卸載）仍持續排下一輪
       }, getPollIntervalMs());
     };
 
@@ -322,7 +322,7 @@ export function useLiveRate() {
 
     return () => {
       alive = false;
-      clearInterval(timer.current);
+      clearTimeout(timer.current);
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
