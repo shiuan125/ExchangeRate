@@ -223,7 +223,7 @@ export function minutesSince(ts) {
 
 ### 6.2 `src/utils/market.js`
 
-報價更新時間：**週一至週五 09:00–隔日 02:00（台北時間，跨夜延續至隔天凌晨）**。15:30 後前端輪詢間隔由每 1 分鐘改為每 2 分鐘（來源本身每 5 分鐘才更新一次）。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
+報價更新時間：**週一至週五 09:00–16:00（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
 
 ```javascript
 /** 取得當前台北時間的 { day, minutes } */
@@ -242,17 +242,7 @@ function taipeiNow() {
 
 export function isMarketOpen() {
   const { day, minutes } = taipeiNow();
-  const isWeekdaySession = day >= 1 && day <= 5 && minutes >= 540; // 週一~週五 09:00 起
-  const isOvernightContinuation = day >= 2 && day <= 6 && minutes < 120; // 延續至隔日（週二~週六）02:00 前
-  return isWeekdaySession || isOvernightContinuation;
-}
-
-/** 15:30 後（含跨夜延續至隔日 02:00）輪詢間隔改為每 2 分鐘；其餘開盤時間每 1 分鐘 */
-export function getPollIntervalMs() {
-  const { day, minutes } = taipeiNow();
-  const isWeekdaySlow = day >= 1 && day <= 5 && minutes >= 930; // 週一~週五 15:30 起
-  const isOvernightSlow = day >= 2 && day <= 6 && minutes < 120; // 延續至隔日 02:00 前皆為慢速更新
-  return (isWeekdaySlow || isOvernightSlow) ? 120_000 : 60_000;
+  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 960;
 }
 ```
 
@@ -266,7 +256,7 @@ export function getPollIntervalMs() {
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { isMarketOpen, getPollIntervalMs } from '../utils/market';
+import { isMarketOpen } from '../utils/market';
 
 // fetchFromFirestore()：收盤後改讀 rates/{currency}_{year} 最新一筆，實作見 src/hooks/useLiveRate.js
 async function fetchFromRealtime() {
@@ -301,14 +291,13 @@ export function useLiveRate() {
       }
     };
 
-    // 用遞迴 setTimeout 取代 setInterval，讓輪詢間隔可隨時段（15:30 後變慢）動態調整
     const schedule = () => {
-      clearTimeout(timer.current);
-      if (!isMarketOpen()) return; // 時段外不需要輪詢
-      timer.current = setTimeout(async () => {
-        if (document.visibilityState === 'visible') await fetchRate();
-        if (alive) schedule(); // 避免 unmount 後（fetchRate 期間卸載）仍持續排下一輪
-      }, getPollIntervalMs());
+      clearInterval(timer.current);
+      // 更新時段內每分鐘輪詢 Firestore；時段外不需要輪詢
+      if (!isMarketOpen()) return;
+      timer.current = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchRate();
+      }, 60_000);
     };
 
     fetchRate();
@@ -322,7 +311,7 @@ export function useLiveRate() {
 
     return () => {
       alive = false;
-      clearTimeout(timer.current);
+      clearInterval(timer.current);
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
@@ -406,13 +395,13 @@ const SA = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({ credential: admin.credential.cert(SA) });
 const db = admin.firestore();
 
-// 交易日的星期幾（0=日 ... 6=六）。dateKey 是純日期字串（YYYY-MM-DD），用 UTC 建構避免受執行環境時區影響
-function weekdayOfDateKey(dateKey) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+function parseBoardTime(s) {
+  const m = String(s).match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  return { dateKey: `${m[1]}-${m[2]}-${m[3]}`, year: m[1] };
 }
 
-// 台北時間的星期幾（執行當下）
+// 台北時間的星期幾
 function taipeiWeekday() {
   const w = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Taipei', weekday: 'short',
@@ -420,26 +409,11 @@ function taipeiWeekday() {
   return { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 }[w];
 }
 
-/**
- * 營業時間延伸到隔日 02:00，00:00–08:59 的報價屬於前一天開盤延續的收盤價，
- * 歸屬前一個交易日，dateKey／year 都要回推一天，歷史走勢圖的日期才會對齊實際開盤日。
- */
-function parseBoardTime(s) {
-  const m = String(s).match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
-  if (!m) return null;
-  const [, y, mo, d, h] = m;
-  if (Number(h) >= 9) return { dateKey: `${y}-${mo}-${d}`, year: y };
-
-  const prevDay = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d)));
-  prevDay.setUTCDate(prevDay.getUTCDate() - 1);
-  return { dateKey: prevDay.toISOString().slice(0, 10), year: String(prevDay.getUTCFullYear()) };
-}
-
 async function main() {
-  // 早退防呆：週日全天不可能有任何交易日的收盤資料，直接跳過省一次上游配額；
-  // 週六則必須先抓資料才能判斷（可能是週五收盤延續到週六 02:00 的資料）
-  if (taipeiWeekday() === 0) {
-    console.log('非營業日（週日），跳過');
+  // 防呆一：非營業日不寫入
+  const day = taipeiWeekday();
+  if (day === 0 || day === 6) {
+    console.log('非營業日，跳過');
     return;
   }
 
@@ -449,14 +423,6 @@ async function main() {
 
   const bt = parseBoardTime(d.boardTime);
   if (!bt) throw new Error(`boardTime 格式錯誤: ${d.boardTime}`);
-
-  // 防呆一：非營業日不寫入。用交易日（bt.dateKey）判斷，而非執行當下的星期——
-  // 若排在收盤時刻（隔日 02:00）執行，執行當下可能已經是週六，但資料其實屬於週五
-  const tradingDay = weekdayOfDateKey(bt.dateKey);
-  if (tradingDay === 0 || tradingDay === 6) {
-    console.log(`非營業日（交易日 ${bt.dateKey}），跳過`);
-    return;
-  }
 
   const payload = {
     USD: {
