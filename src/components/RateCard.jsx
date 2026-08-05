@@ -19,7 +19,7 @@ function RateNumber({ value, currency, variant }) {
 
 /** 跟前次盤後收盤價比較：漲紅色向上箭頭、跌綠色向下箭頭，箭頭右邊標漲跌幅百分比 */
 function ChangeArrow({ value, prev }) {
-  if (typeof value !== 'number' || typeof prev !== 'number' || value === prev || prev === 0) return null;
+  if (!Number.isFinite(value) || !Number.isFinite(prev) || value === prev || prev === 0) return null;
   const up = value > prev;
   const percent = Math.abs((value - prev) / prev) * 100;
   return (
