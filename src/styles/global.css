@@ -185,6 +185,13 @@ body {
   margin: 0 0 var(--s-4);
 }
 
+.app-footer {
+  text-align: center;
+  font-size: var(--t-xs);
+  color: var(--ink-light);
+  font-family: var(--font-num);
+}
+
 /* ==========================================================================
    MarketStatus
    ========================================================================== */
@@ -314,6 +321,7 @@ body {
   display: inline-block;
   margin-left: var(--s-1);
   font-size: var(--t-micro);
+  white-space: nowrap;
 }
 
 .rate-change--up   { color: var(--up); }

@@ -20,10 +20,33 @@ function taipeiWeekday() {
   return { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[w];
 }
 
+// 台北時間的日期字串 YYYY-MM-DD
+function taipeiDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(date);
+}
+
+/**
+ * 今天是不是交易日：優先讀 Firestore 的行事曆（scripts/sync-calendar.js 排程寫入的
+ * calendar/{year}，國定假日／補班日），讀不到資料（含 Firestore 讀取失敗）就直接用週休二日判斷。
+ */
+async function isTodayTradingDay() {
+  const todayKey = taipeiDateKey();
+  let isHoliday;
+  try {
+    const snap = await db.collection('calendar').doc(todayKey.slice(0, 4)).get();
+    isHoliday = snap.exists ? snap.data()?.data?.[todayKey] : undefined;
+  } catch (e) {
+    console.error('讀取行事曆失敗，fallback 用週休二日判斷', e);
+  }
+  if (typeof isHoliday === 'boolean') return !isHoliday;
+
+  const day = taipeiWeekday();
+  return day !== 0 && day !== 6;
+}
+
 async function main() {
   // 防呆一：非營業日不寫入
-  const day = taipeiWeekday();
-  if (day === 0 || day === 6) {
+  if (!(await isTodayTradingDay())) {
     console.log('非營業日，跳過');
     return;
   }
