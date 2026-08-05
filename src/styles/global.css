@@ -185,6 +185,13 @@ body {
   margin: 0 0 var(--s-4);
 }
 
+.app-footer {
+  text-align: center;
+  font-size: var(--t-xs);
+  color: var(--ink-light);
+  font-family: var(--font-num);
+}
+
 /* ==========================================================================
    MarketStatus
    ========================================================================== */
