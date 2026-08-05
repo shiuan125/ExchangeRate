@@ -17,13 +17,14 @@ function RateNumber({ value, currency, variant }) {
   );
 }
 
-/** 跟前次盤後收盤價比較：漲紅色向上箭頭、跌綠色向下箭頭 */
+/** 跟前次盤後收盤價比較：漲紅色向上箭頭、跌綠色向下箭頭，箭頭右邊標漲跌幅百分比 */
 function ChangeArrow({ value, prev }) {
-  if (typeof value !== 'number' || typeof prev !== 'number' || value === prev) return null;
+  if (typeof value !== 'number' || typeof prev !== 'number' || value === prev || prev === 0) return null;
   const up = value > prev;
+  const percent = Math.abs((value - prev) / prev) * 100;
   return (
-    <span className={`rate-change rate-change--${up ? 'up' : 'down'}`} aria-label={up ? '較前次盤後上漲' : '較前次盤後下跌'}>
-      {up ? '▲' : '▼'}
+    <span className={`rate-change rate-change--${up ? 'up' : 'down'}`} aria-label={`較前次盤後${up ? '上漲' : '下跌'} ${percent.toFixed(2)}%`}>
+      {up ? '▲' : '▼'} {percent.toFixed(2)}%
     </span>
   );
 }

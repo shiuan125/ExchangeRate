@@ -321,6 +321,7 @@ body {
   display: inline-block;
   margin-left: var(--s-1);
   font-size: var(--t-micro);
+  white-space: nowrap;
 }
 
 .rate-change--up   { color: var(--up); }
