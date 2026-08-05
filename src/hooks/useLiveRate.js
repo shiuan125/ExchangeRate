@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { isMarketOpen } from '../utils/market';
+import { isMarketOpen, getPollIntervalMs } from '../utils/market';
 
 /** 即時報價：GAS 定時寫入的 cathaybk/realtime，不再直接打外部匯率 API */
 async function fetchFromRealtime() {
@@ -96,15 +96,15 @@ export function useLiveRate() {
       return runFetch(fetchFromFirestore);
     };
 
+    // 用遞迴 setTimeout 而非固定 setInterval，讓輪詢間隔能隨時段（15:30 後變慢）動態調整
     const schedule = () => {
-      clearInterval(timer.current);
-      if (isMarketOpen()) {
-        timer.current = setInterval(() => {
-          if (document.visibilityState === 'visible') fetchRate();
-        }, 60_000);
-        return;
-      }
-      // 收盤後資料一天只同步一次，不需要輪詢；等分頁重新可見時再補抓
+      clearTimeout(timer.current);
+      if (!isMarketOpen()) return; // 收盤後資料一天只同步一次，不需要輪詢；等分頁重新可見時再補抓
+
+      timer.current = setTimeout(async () => {
+        if (document.visibilityState === 'visible') await fetchRate();
+        schedule();
+      }, getPollIntervalMs());
     };
 
     fetchRate();

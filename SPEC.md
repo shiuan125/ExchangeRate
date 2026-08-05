@@ -223,7 +223,7 @@ export function minutesSince(ts) {
 
 ### 6.2 `src/utils/market.js`
 
-報價更新時間：**週一至週五 09:00–16:00（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
+報價更新時間：**週一至週五 09:00–隔日 02:00（台北時間，跨夜延續至隔天凌晨）**。15:30 後前端輪詢間隔由每 1 分鐘改為每 2 分鐘（來源本身每 5 分鐘才更新一次）。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
 
 ```javascript
 /** 取得當前台北時間的 { day, minutes } */
@@ -242,7 +242,17 @@ function taipeiNow() {
 
 export function isMarketOpen() {
   const { day, minutes } = taipeiNow();
-  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 960;
+  const isWeekdaySession = day >= 1 && day <= 5 && minutes >= 540; // 週一~週五 09:00 起
+  const isOvernightContinuation = day >= 2 && day <= 6 && minutes < 120; // 延續至隔日（週二~週六）02:00 前
+  return isWeekdaySession || isOvernightContinuation;
+}
+
+/** 15:30 後（含跨夜延續至隔日 02:00）輪詢間隔改為每 2 分鐘；其餘開盤時間每 1 分鐘 */
+export function getPollIntervalMs() {
+  const { day, minutes } = taipeiNow();
+  const isWeekdaySlow = day >= 1 && day <= 5 && minutes >= 930; // 週一~週五 15:30 起
+  const isOvernightSlow = day >= 2 && day <= 6 && minutes < 120; // 延續至隔日 02:00 前皆為慢速更新
+  return (isWeekdaySlow || isOvernightSlow) ? 120_000 : 60_000;
 }
 ```
 
@@ -256,7 +266,7 @@ export function isMarketOpen() {
 import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { isMarketOpen } from '../utils/market';
+import { isMarketOpen, getPollIntervalMs } from '../utils/market';
 
 // fetchFromFirestore()：收盤後改讀 rates/{currency}_{year} 最新一筆，實作見 src/hooks/useLiveRate.js
 async function fetchFromRealtime() {
@@ -291,13 +301,14 @@ export function useLiveRate() {
       }
     };
 
+    // 用遞迴 setTimeout 取代 setInterval，讓輪詢間隔可隨時段（15:30 後變慢）動態調整
     const schedule = () => {
-      clearInterval(timer.current);
-      // 更新時段內每分鐘輪詢 Firestore；時段外不需要輪詢
-      if (!isMarketOpen()) return;
-      timer.current = setInterval(() => {
-        if (document.visibilityState === 'visible') fetchRate();
-      }, 60_000);
+      clearTimeout(timer.current);
+      if (!isMarketOpen()) return; // 時段外不需要輪詢
+      timer.current = setTimeout(async () => {
+        if (document.visibilityState === 'visible') await fetchRate();
+        schedule();
+      }, getPollIntervalMs());
     };
 
     fetchRate();
