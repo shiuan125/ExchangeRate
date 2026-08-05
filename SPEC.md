@@ -26,6 +26,7 @@
 | 資料庫 | Google Cloud Firestore | NoSQL，免費額度充足 |
 | 即時匯率排程 | Google Apps Script | 定時觸發，直接寫入 Firestore |
 | 每日歸檔排程 | `scripts/sync-rates.js`（手動 / GitHub Actions `workflow_dispatch`） | 寫入 Firestore |
+| 行事曆同步排程 | `scripts/sync-calendar.js`（GitHub Actions cron，每天台北 00:10） | 抓 TaiwanCalendar 寫入 Firestore `calendar/{year}` |
 | 部署 | Vercel | 前端靜態檔 |
 | 樣式 | 純 CSS（CSS Modules 或單一 global.css） | 不引入 UI 框架 |
 
@@ -79,6 +80,7 @@
 - **更新時段結束後 API 仍會回傳最後一筆報價**，`boardTime` 不會更新。必須靠 `boardTime` 判斷資料新舊，不能假設「有回應 = 資料是新的」。
 - `boardTime` 沒有時區標記，實際為台北時間（UTC+8）。
 - 上游是 Google Apps Script，有每日配額限制，且重新部署會導致網址失效。所有呼叫都必須有錯誤處理。
+- 國定假日／補班日判斷依賴外部的 [ruyut/TaiwanCalendar](https://github.com/ruyut/TaiwanCalendar)（見 6.2、6.10 節）。只有 `scripts/sync-calendar.js` 這支每日排程會直接打外部 API（jsDelivr 失敗 fallback `raw.githubusercontent.com`）；前端與 `sync-rates.js` 一律只讀 Firestore 的 `calendar/{year}`，讀不到（排程還沒跑過、資料過期、或 repo 停止維護）就直接 fallback 回「週一至週五」規則，此時遇到國定假日仍可能誤判為營業日。
 
 ---
 
@@ -125,9 +127,15 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+    match /calendar/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
 ```
+
+`calendar/{year}` 存台灣行事曆（見 6.10 節），跟 `rates` 一樣前端只讀，寫入一律透過 Admin SDK。
 
 前端只讀，寫入一律透過 Admin SDK（Google Apps Script / `scripts/sync-rates.js`）繞過規則。
 
@@ -135,7 +143,7 @@ service cloud.firestore {
 
 ## 4. 系統架構
 
-兩條獨立的資料路徑，**不要混在一起**：
+三條獨立的資料路徑，**不要混在一起**：
 
 ```
 【即時路徑】更新時段內，每分鐘一次
@@ -148,7 +156,12 @@ Google Apps Script（或手動執行 scripts/sync-rates.js） --> Apps Script AP
                                                                                         ↓
 瀏覽器 --getDocs (一次性)--> Firestore --> 繪製折線圖
 
-備援：.github/workflows/sync.yml 保留 workflow_dispatch，可手動觸發歷史路徑的寫入。
+【行事曆路徑】每天一次，台北 00:10
+scripts/sync-calendar.js（GitHub Actions cron） --> TaiwanCalendar --> Firestore calendar/{year}（覆寫整年資料）
+                                                                                ↓
+瀏覽器／sync-rates.js --getDoc--> Firestore calendar/{year}（判斷今天是不是交易日）
+
+備援：.github/workflows/sync.yml、sync-calendar.yml 都保留 workflow_dispatch，可手動觸發。
 ```
 
 **關鍵設計決策**：即時路徑只覆寫單一文件，**不累積每分鐘的歷史紀錄**。若每次輪詢都寫入新文件會產生大量雜訊資料，歷史圖表變得難以處理，也會浪費寫入配額。歷史資料只保留每日最後一筆（`rates/{currency}_{year}`）。
@@ -160,7 +173,8 @@ Google Apps Script（或手動執行 scripts/sync-rates.js） --> Apps Script AP
 ```
 /
 ├── scripts/
-│   └── sync-rates.js           # 每日歸檔寫入腳本（GAS 排程 / 手動執行）
+│   ├── sync-rates.js            # 每日歸檔寫入腳本（GAS 排程 / 手動執行）
+│   └── sync-calendar.js         # 台灣行事曆同步腳本（GitHub Actions cron）
 ├── src/
 │   ├── main.jsx
 │   ├── App.jsx
@@ -175,11 +189,13 @@ Google Apps Script（或手動執行 scripts/sync-rates.js） --> Apps Script AP
 │   │   └── useHistory.js       # 讀取歷史資料
 │   ├── utils/
 │   │   ├── boardTime.js        # boardTime 解析
-│   │   └── market.js           # 更新時段判斷
+│   │   ├── market.js           # 更新時段判斷
+│   │   └── taiwanCalendar.js   # 台灣行事曆（國定假日／補班日）快取與抓取
 │   └── styles/
 │       └── global.css
 ├── .github/workflows/
-│   └── sync.yml
+│   ├── sync.yml                 # 每日歸檔（workflow_dispatch）
+│   └── sync-calendar.yml        # 行事曆同步（cron，每天台北 00:10）
 ├── public/
 ├── .env.example
 ├── .gitignore
@@ -221,9 +237,11 @@ export function minutesSince(ts) {
 }
 ```
 
-### 6.2 `src/utils/market.js`
+### 6.2 `src/utils/market.js` 與 `src/utils/taiwanCalendar.js`
 
-報價更新時間：**週一至週五 09:00–16:00（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
+報價更新時間：**09:00–16:00（台北時間）**。此為預設值，若實際來源的更新區間不同，請調整 `market.js` 中的常數。
+
+交易日判斷**優先用台灣行事曆**（[ruyut/TaiwanCalendar](https://github.com/ruyut/TaiwanCalendar)，含國定假日、補班日），抓不到資料時 fallback 用「週一至週五」為營業日基準：
 
 ```javascript
 /** 取得當前台北時間的 { day, minutes } */
@@ -241,12 +259,22 @@ function taipeiNow() {
 }
 
 export function isMarketOpen() {
+  refreshHolidayCalendarIfNeeded(); // 背景非同步更新今天的行事曆快取，不阻塞這次判斷
   const { day, minutes } = taipeiNow();
-  return day >= 1 && day <= 5 && minutes >= 540 && minutes <= 960;
+  const holiday = readTodayHolidayFlagSync();
+  const isBusinessDay = holiday === null ? (day >= 1 && day <= 5) : !holiday;
+  return isBusinessDay && minutes >= 540 && minutes <= 960;
 }
 ```
 
-**已知限制**：無法判斷國定假日。非營業日 API 會回傳前一交易日的值，前端靠 `boardTime` 顯示「最後更新於 X」即可，不需要額外處理。
+`taiwanCalendar.js` 的設計重點：
+- **資料來源是 Firestore，不是直接打外部 API**：`getDoc(doc(db, 'calendar', year))` 讀 `scripts/sync-calendar.js` 排程寫入的 `calendar/{year}`（見 6.10 節）。原始 TaiwanCalendar 資料只有那支排程會抓，前端／`sync-rates.js` 都只讀 Firestore，避免每個使用者各自打一次外部 API。
+- 兩層快取，各自解決不同問題：
+  - **記憶體快取**（module 層級變數）：只在模組載入時讀一次 `localStorage`，之後 `isMarketOpen()` 被呼叫再多次（每分鐘輪詢、每次畫面重繪）都只碰這個變數，不會重複 `JSON.parse` 一整年資料。
+  - **`localStorage`**：跨「重新整理／關掉分頁再打開」還記得今天抓過了，不用每次重新整理都再讀一次 Firestore。
+- `readTodayHolidayFlagSync()`：純同步、只讀記憶體快取，不發任何請求；快取不是今天的資料就回傳 `null`。
+- `refreshHolidayCalendarIfNeeded()`：fire-and-forget，記憶體快取不是今天的資料才會真的讀一次 Firestore 並寫回記憶體 + `localStorage`；「今天讀過了沒」只看記憶體是否新鮮，不依賴 `localStorage` 寫入是否成功（就算 `localStorage` 被停用，同一個 session 內也只會真正打一次 Firestore）。失敗的話至少間隔 5 分鐘才重試，避免每次輪詢（1 分鐘一次）都打。
+- **已知限制**：使用者當天第一次進入網站時，`isMarketOpen()` 那次判斷可能還沒讀到當天的行事曆（快取是同步讀取、抓取是背景非同步），會先用「週一至週五」fallback；等背景讀取完成後，下一次輪詢（最慢 1 分鐘後）才會套用正確的假日／補班日判斷。
 
 ### 6.3 `src/hooks/useLiveRate.js`
 
@@ -401,7 +429,7 @@ function parseBoardTime(s) {
   return { dateKey: `${m[1]}-${m[2]}-${m[3]}`, year: m[1] };
 }
 
-// 台北時間的星期幾
+// 台北時間的星期幾（行事曆抓不到資料時的 fallback 基準）
 function taipeiWeekday() {
   const w = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Taipei', weekday: 'short',
@@ -409,10 +437,26 @@ function taipeiWeekday() {
   return { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 }[w];
 }
 
+// 台北時間的日期字串 YYYY-MM-DD
+function taipeiDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(date);
+}
+
+// 今天是不是交易日：優先讀 Firestore 的行事曆（scripts/sync-calendar.js 排程寫入的
+// calendar/{year}，見 6.10 節），讀不到資料才 fallback 用週休二日判斷
+async function isTodayTradingDay() {
+  const todayKey = taipeiDateKey();
+  const snap = await db.collection('calendar').doc(todayKey.slice(0, 4)).get();
+  const isHoliday = snap.exists ? snap.data()?.data?.[todayKey] : undefined;
+  if (typeof isHoliday === 'boolean') return !isHoliday;
+
+  const day = taipeiWeekday();
+  return day !== 0 && day !== 6;
+}
+
 async function main() {
   // 防呆一：非營業日不寫入
-  const day = taipeiWeekday();
-  if (day === 0 || day === 6) {
+  if (!(await isTodayTradingDay())) {
     console.log('非營業日，跳過');
     return;
   }
@@ -520,6 +564,65 @@ jobs:
 - 幣別切換：USD / JPY
 - X 軸日期，Y 軸自動縮放（**不要從 0 開始**，匯率波動小，從 0 開始會看不出變化，需設 `domain={['dataMin - padding', 'dataMax + padding']}`）
 - 資料點少於 2 筆時顯示「資料累積中」而非空白圖表
+
+### 6.10 `scripts/sync-calendar.js` 與 `.github/workflows/sync-calendar.yml` — 行事曆同步排程
+
+**目的**：全站一天只打一次 [ruyut/TaiwanCalendar](https://github.com/ruyut/TaiwanCalendar) 外部 API，而不是每個使用者的瀏覽器各自打一次。這支排程把當年度的國定假日／補班日資料抓下來，寫進 Firestore `calendar/{year}`，前端與 `sync-rates.js` 都只讀這份 Firestore 資料（見 6.2、6.7 節）。
+
+```javascript
+import admin from 'firebase-admin';
+
+const SA = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+admin.initializeApp({ credential: admin.credential.cert(SA) });
+const db = admin.firestore();
+
+function taipeiDateKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(date);
+}
+
+// isHoliday === true 表示當天休假；false 表示上班日（含補班的週六）
+async function fetchYearCalendar(year) {
+  const urls = [
+    `https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`,
+    `https://raw.githubusercontent.com/ruyut/TaiwanCalendar/master/data/${year}.json`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const list = await res.json();
+      const data = {};
+      for (const item of list) {
+        data[`${item.date.slice(0,4)}-${item.date.slice(4,6)}-${item.date.slice(6,8)}`] = item.isHoliday;
+      }
+      return data;
+    } catch { /* 換下一個來源 */ }
+  }
+  return null;
+}
+
+async function main() {
+  const year = taipeiDateKey().slice(0, 4);
+  const data = await fetchYearCalendar(year);
+  if (!data) throw new Error(`TaiwanCalendar ${year} 年度資料抓取失敗`);
+
+  await db.collection('calendar').doc(year).set({ data, updatedAt: new Date().toISOString() });
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
+```
+
+排程時間：**每天台北時間 00:10（UTC 16:10 前一天）**，在 09:00 開盤前留足夠緩衝時間完成同步：
+
+```yaml
+# .github/workflows/sync-calendar.yml
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '10 16 * * *'
+```
+
+**已知限制**：抓取失敗（jsDelivr、raw.githubusercontent 都失敗）會讓這次 Action 執行失敗（拋錯、exit code 非 0），但**不會覆寫 Firestore 裡既有的資料**——前端與 `sync-rates.js` 還是讀得到前一天同步的版本，只是當天若剛好是新的國定假日調整（例如颱風臨時補班公告），會晚一天才反映。
 
 ---
 
@@ -630,7 +733,9 @@ Repository → Settings → Secrets and variables → Actions：
 |---|---|---|
 | Apps Script 重新部署導致網址失效 | 全站無資料 | 環境變數集中管理，換網址不需改碼 |
 | Apps Script 每日配額耗盡 | 即時功能失效 | Edge 快取 60 秒大幅降低呼叫量 |
-| 國定假日誤判為更新時段 | 顯示「更新中」但資料不動 | 靠 `boardTime` 停滯提示補足 |
+| 國定假日誤判為更新時段 | 顯示「更新中」但資料不動 | 優先用台灣行事曆判斷交易日（見 6.2 節），抓不到才 fallback 週一至週五；靠 `boardTime` 停滯提示補足殘餘情況 |
+| TaiwanCalendar 資料來源不可用或未更新 | 假日／補班日判斷退回週末規則，可能誤判 | `sync-calendar.js` 內 jsDelivr 失敗時 fallback `raw.githubusercontent.com`；前端／`sync-rates.js` 讀不到 Firestore `calendar/{year}` 則直接 fallback 週一至週五 |
+| `sync-calendar.js` 排程失敗或延遲 | 當天讀到的是前一天（或更早）的行事曆，遇到臨時公告的補班/假日會誤判 | 失敗不覆寫 Firestore 既有資料，隔天排程正常執行即自動修正 |
 | GitHub Actions cron 延遲 | 寫入時間不固定 | 抓當日最後定值，延遲無影響 |
 | 上游回傳格式變更 | 資料錯誤 | `sync-rates.js` 的數值驗證會擋下 |
 
