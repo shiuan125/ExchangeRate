@@ -10,6 +10,17 @@ function taipeiDateKey(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(date);
 }
 
+/** 台北時間的 ISO 字串（+08:00，台灣無日光節約時間，固定 UTC+8） */
+function taipeiISOString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}+08:00`;
+}
+
 /**
  * 台灣行事曆（國定假日／補班日）：https://github.com/ruyut/TaiwanCalendar
  * isHoliday === true 表示當天休假；false 表示上班日（含補班的週六）。
@@ -55,7 +66,7 @@ async function main() {
 
   await db.collection('calendar').doc(year).set({
     data,
-    updatedAt: new Date().toISOString(),
+    updatedAt: taipeiISOString(),
   });
   console.log(`calendar/${year} 已寫入，共 ${Object.keys(data).length} 天`);
 }
