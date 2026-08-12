@@ -14,6 +14,40 @@ const RANGES = [
   { value: '1y', label: '1年', days: 365 },
 ];
 
+function ExtremeDot({ cx, cy, stroke, board, label, placement }) {
+  if (cx == null || cy == null) return null;
+  const dy = placement === 'above' ? -10 : 16;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={3.5} fill={stroke} stroke={board} strokeWidth={1.5} />
+      <text
+        x={cx}
+        y={cy + dy}
+        textAnchor="middle"
+        fontSize={10}
+        fontFamily="var(--font-num)"
+        fill={stroke}
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
+function findExtremeIndexes(data, dataKey) {
+  let maxIndex = -1;
+  let minIndex = -1;
+  let maxValue = -Infinity;
+  let minValue = Infinity;
+  data.forEach((row, i) => {
+    const v = row[dataKey];
+    if (v == null) return;
+    if (v > maxValue) { maxValue = v; maxIndex = i; }
+    if (v < minValue) { minValue = v; minIndex = i; }
+  });
+  return { maxIndex, minIndex };
+}
+
 function CustomTooltip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
   // 賣出排在買入上面，跟圖表線條與圖例順序一致
@@ -55,6 +89,38 @@ export function HistoryChart() {
         sell: mode === 'spot' ? r.spotSell : r.cashSell,
       }));
   }, [rows, mode, range]);
+
+  const buyExtremes = useMemo(() => findExtremeIndexes(data, 'buy'), [data]);
+  const sellExtremes = useMemo(() => findExtremeIndexes(data, 'sell'), [data]);
+
+  const renderExtremeDot = (extremes, stroke, placementMax, placementMin) => (props) => {
+    const { index, value, key } = props;
+    if (index === extremes.maxIndex) {
+      return (
+        <ExtremeDot
+          key={key ?? `max-${index}`}
+          {...props}
+          stroke={stroke}
+          board={colors.board}
+          label={formatRate(value, currency)}
+          placement={placementMax}
+        />
+      );
+    }
+    if (index === extremes.minIndex) {
+      return (
+        <ExtremeDot
+          key={key ?? `min-${index}`}
+          {...props}
+          stroke={stroke}
+          board={colors.board}
+          label={formatRate(value, currency)}
+          placement={placementMin}
+        />
+      );
+    }
+    return null;
+  };
 
   return (
     <section>
@@ -117,8 +183,22 @@ export function HistoryChart() {
                 ]}
                 formatter={(value) => <span style={{ color: colors.inkLight }}>{value}</span>}
               />
-              <Line type="monotone" dataKey="buy" stroke={colors.down} strokeWidth={1.75} dot={false} />
-              <Line type="monotone" dataKey="sell" stroke={colors.up} strokeWidth={1.75} dot={false} />
+              <Line
+                type="monotone"
+                dataKey="buy"
+                stroke={colors.down}
+                strokeWidth={1.75}
+                dot={renderExtremeDot(buyExtremes, colors.down, 'below', 'below')}
+                isAnimationActive={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="sell"
+                stroke={colors.up}
+                strokeWidth={1.75}
+                dot={renderExtremeDot(sellExtremes, colors.up, 'above', 'above')}
+                isAnimationActive={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
