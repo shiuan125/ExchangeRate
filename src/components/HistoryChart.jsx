@@ -14,19 +14,30 @@ const RANGES = [
   { value: '1y', label: '1年', days: 365 },
 ];
 
-function ExtremeDot({ cx, cy, stroke, board, label, placement }) {
+function ExtremeDot({
+  cx, cy, stroke, board, label, placement, isEdge,
+}) {
   if (cx == null || cy == null) return null;
-  const dy = placement === 'above' ? -10 : 16;
+  // 首尾兩點跟 X 軸的日期刻度共用同一個 x 座標，若標籤往下放會直接疊在刻度文字上，
+  // 這裡強制改往上放並左右錯開，徹底避開軸刻度文字
+  const dy = (placement === 'above' || isEdge) ? -10 : 16;
+  const textAnchor = isEdge === 'first' ? 'start' : isEdge === 'last' ? 'end' : 'middle';
+  const dx = isEdge === 'first' ? 6 : isEdge === 'last' ? -6 : 0;
   return (
     <g>
       <circle cx={cx} cy={cy} r={3.5} fill={stroke} stroke={board} strokeWidth={1.5} />
+      {/* 先畫一層背景色描邊當「暈開」底，避免線條穿過文字時互相遮蔽 */}
       <text
-        x={cx}
+        x={cx + dx}
         y={cy + dy}
-        textAnchor="middle"
+        textAnchor={textAnchor}
         fontSize={10}
         fontFamily="var(--font-num)"
+        stroke={board}
+        strokeWidth={3}
+        strokeLinejoin="round"
         fill={stroke}
+        paintOrder="stroke"
       >
         {label}
       </text>
@@ -95,6 +106,7 @@ export function HistoryChart() {
 
   const renderExtremeDot = (extremes, stroke, placementMax, placementMin) => (props) => {
     const { index, value, key } = props;
+    const isEdge = index === 0 ? 'first' : index === data.length - 1 ? 'last' : null;
     if (index === extremes.maxIndex) {
       return (
         <ExtremeDot
@@ -104,6 +116,7 @@ export function HistoryChart() {
           board={colors.board}
           label={formatRate(value, currency)}
           placement={placementMax}
+          isEdge={isEdge}
         />
       );
     }
@@ -116,6 +129,7 @@ export function HistoryChart() {
           board={colors.board}
           label={formatRate(value, currency)}
           placement={placementMin}
+          isEdge={isEdge}
         />
       );
     }
