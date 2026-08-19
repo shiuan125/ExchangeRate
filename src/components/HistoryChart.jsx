@@ -15,12 +15,12 @@ const RANGES = [
 ];
 
 function ExtremeDot({
-  cx, cy, stroke, board, label, placement, isEdge,
+  cx, cy, stroke, board, label, isEdge,
 }) {
   if (cx == null || cy == null) return null;
-  // 首尾兩點跟 X 軸的日期刻度共用同一個 x 座標，若標籤往下放會直接疊在刻度文字上，
-  // 這裡強制改往上放並左右錯開，徹底避開軸刻度文字
-  const dy = (placement === 'above' || isEdge) ? -10 : 16;
+  // Y 軸只留資料極值 0.4% 的緩衝，最低點會非常靠近 X 軸，
+  // 標籤一律往上放，才不會疊到下方的日期刻度文字
+  const dy = -10;
   const textAnchor = isEdge === 'first' ? 'start' : isEdge === 'last' ? 'end' : 'middle';
   const dx = isEdge === 'first' ? 6 : isEdge === 'last' ? -6 : 0;
   return (
@@ -104,7 +104,7 @@ export function HistoryChart() {
   const buyExtremes = useMemo(() => findExtremeIndexes(data, 'buy'), [data]);
   const sellExtremes = useMemo(() => findExtremeIndexes(data, 'sell'), [data]);
 
-  const renderExtremeDot = (extremes, stroke, placementMax, placementMin) => (props) => {
+  const renderExtremeDot = (extremes, stroke) => (props) => {
     const { index, value, key } = props;
     const isEdge = index === 0 ? 'first' : index === data.length - 1 ? 'last' : null;
     if (index === extremes.maxIndex) {
@@ -115,7 +115,6 @@ export function HistoryChart() {
           stroke={stroke}
           board={colors.board}
           label={formatRate(value, currency)}
-          placement={placementMax}
           isEdge={isEdge}
         />
       );
@@ -128,7 +127,6 @@ export function HistoryChart() {
           stroke={stroke}
           board={colors.board}
           label={formatRate(value, currency)}
-          placement={placementMin}
           isEdge={isEdge}
         />
       );
@@ -168,13 +166,14 @@ export function HistoryChart() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <LineChart data={data} margin={{ top: 8, right: 20, bottom: 8, left: 8 }}>
               <CartesianGrid stroke={colors.rule} strokeDasharray="0" vertical={false} />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11, fill: colors.inkLight, fontFamily: 'var(--font-num)' }}
                 tickLine={false}
                 axisLine={{ stroke: colors.rule }}
+                interval="preserveStartEnd"
                 minTickGap={40}
                 tickFormatter={(d) => d.slice(5).replace('-', '/')}
               />
@@ -202,7 +201,7 @@ export function HistoryChart() {
                 dataKey="buy"
                 stroke={colors.down}
                 strokeWidth={1.75}
-                dot={renderExtremeDot(buyExtremes, colors.down, 'below', 'below')}
+                dot={renderExtremeDot(buyExtremes, colors.down)}
                 isAnimationActive={false}
               />
               <Line
@@ -210,7 +209,7 @@ export function HistoryChart() {
                 dataKey="sell"
                 stroke={colors.up}
                 strokeWidth={1.75}
-                dot={renderExtremeDot(sellExtremes, colors.up, 'above', 'above')}
+                dot={renderExtremeDot(sellExtremes, colors.up)}
                 isAnimationActive={false}
               />
             </LineChart>
