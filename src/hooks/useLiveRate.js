@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { isMarketOpen } from '../utils/market';
+import { mapSinopacRealtime } from '../utils/sinopacRate';
 
 /** 即時報價：GAS 定時寫入的 cathaybk/realtime，不再直接打外部匯率 API */
 async function fetchFromRealtime() {
@@ -68,7 +69,15 @@ async function fetchFromFirestore() {
   };
 }
 
-export function useLiveRate() {
+/** 永豐：GAS 定時覆寫 sinopac/realtime；盤後即為 15:30 收盤價，不另讀 rates */
+async function fetchFromSinopac() {
+  const snap = await getDoc(doc(db, 'sinopac', 'realtime'));
+  if (!snap.exists()) throw new Error('Firestore 尚無永豐即時資料');
+  return mapSinopacRealtime(snap.data());
+}
+
+/** @param {'cathay' | 'sinopac'} bank */
+export function useLiveRate(bank = 'cathay') {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,6 +100,7 @@ export function useLiveRate() {
     };
 
     const fetchRate = async () => {
+      if (bank === 'sinopac') return runFetch(fetchFromSinopac);
       const marketOpen = isMarketOpen();
       if (marketOpen) return runFetch(fetchFromRealtime);
       return runFetch(fetchFromFirestore);
@@ -121,7 +131,7 @@ export function useLiveRate() {
       clearInterval(timer.current);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, []);
+  }, [bank]);
 
   return { data, error, loading, fetching };
 }

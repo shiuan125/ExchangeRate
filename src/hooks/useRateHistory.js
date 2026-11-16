@@ -3,11 +3,16 @@ import { fetchYearRows } from './useHistory';
 import { taipeiToday } from '../utils/date';
 
 /** 抓某幣別跨今年／去年的歷史資料（合併排序），供「近N天最低/最高」徽章與歷史走勢圖使用 */
-export function useRateHistory(currency) {
+export function useRateHistory(currency, enabled = true) {
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) {
+      setRows([]);
+      setLoading(false);
+      return undefined;
+    }
     let alive = true;
     setLoading(true);
     (async () => {
@@ -29,7 +34,7 @@ export function useRateHistory(currency) {
       }
     })();
     return () => { alive = false; };
-  }, [currency]);
+  }, [currency, enabled]);
 
   return { rows, loading };
 }
