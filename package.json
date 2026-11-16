@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "sync-rates": "node scripts/sync-rates.js"
+    "sync-rates": "node scripts/sync-rates.js",
+    "test": "node --test"
   },
   "dependencies": {
     "firebase": "^10.13.0",
