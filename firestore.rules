@@ -1,11 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /rates/{document} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /calendar/{document} {
+    // 與線上規則一致：所有 collection（rates、calendar、cathaybk、sinopac）公開可讀，
+    // 前端一律不能寫入；寫入只透過服務帳戶（GAS / Admin SDK）繞過規則。
+    match /{document=**} {
       allow read: if true;
       allow write: if false;
     }

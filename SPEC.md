@@ -114,6 +114,24 @@ rates/
 }
 ```
 
+### 3.2.1 即時匯率文件
+
+```javascript
+// cathaybk/realtime：國泰，GAS 每分鐘覆寫（欄位沿用國泰網頁命名，值為字串）
+{ boardTime, usddigitsbuyRate, usddigitssellRate, usdcashbuyRate, ..., gbpdigitssellRate, updatedAt }
+
+// sinopac/realtime：永豐，GAS 每分鐘覆寫（來源 mma.sinopac.com ws_exchange.ashx REMIT=即期、CASH=現鈔）
+{
+  boardTime: "2026/11/16 15:30:37",
+  usd: { spotBuy, spotSell, cashBuy, cashSell },
+  jpy: { spotBuy, spotSell, cashBuy, cashSell },
+  gbp: { spotBuy, spotSell },   // 英鎊沒有現鈔
+  updatedAt: Timestamp
+}
+```
+
+永豐目前**沒有每日歸檔**：永豐頁盤後直接顯示 `sinopac/realtime`（即 15:30 收盤價），不顯示歷史走勢圖與依歷史計算的徽章／漲跌箭頭。
+
 **設計理由**：日期字串當 key，四個價格全存（就算前端目前只顯示部分，之後要加功能不用回頭補資料）。原始 `boardTime` 字串一併保留，方便日後除錯與驗證資料來源。
 
 ### 3.3 Firestore 安全規則
@@ -123,11 +141,7 @@ rates/
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /rates/{document} {
-      allow read: if true;
-      allow write: if false;
-    }
-    match /calendar/{document} {
+    match /{document=**} {
       allow read: if true;
       allow write: if false;
     }
@@ -135,7 +149,7 @@ service cloud.firestore {
 }
 ```
 
-`calendar/{year}` 存台灣行事曆（見 6.10 節），跟 `rates` 一樣前端只讀，寫入一律透過 Admin SDK。
+所有 collection（`rates`、`calendar`、`cathaybk`、`sinopac`）一律公開可讀、前端不可寫。`calendar/{year}` 存台灣行事曆（見 6.10 節），跟 `rates` 一樣前端只讀，寫入一律透過 Admin SDK。
 
 前端只讀，寫入一律透過 Admin SDK（Google Apps Script / `scripts/sync-rates.js`）繞過規則。
 
@@ -150,6 +164,7 @@ service cloud.firestore {
 Google Apps Script (time-driven trigger) --> Apps Script API --> Firestore 即時匯率文件（覆寫最新一筆）
                                                                         ↓
 瀏覽器 --輪詢 getDoc--> Firestore 即時匯率文件
+（國泰：cathaybk/realtime；永豐：同一支 GAS 的 realtimeTask 一併抓永豐 API，覆寫 sinopac/realtime，兩家各自 try/catch 互不影響）
 
 【歷史路徑】每日一次
 Google Apps Script（或手動執行 scripts/sync-rates.js） --> Apps Script API --> Firestore rates/{currency}_{year}（merge 寫入當日一筆）
@@ -183,14 +198,18 @@ scripts/sync-calendar.js（GitHub Actions cron） --> TaiwanCalendar --> Firesto
 │   │   ├── LiveRatePanel.jsx   # 即時匯率面板
 │   │   ├── RateCard.jsx        # 單一幣別卡片
 │   │   ├── HistoryChart.jsx    # 歷史折線圖
-│   │   └── MarketStatus.jsx    # 資料更新狀態指示
+│   │   ├── MarketStatus.jsx    # 資料更新狀態指示
+│   │   └── BankSwitch.jsx      # 國泰／永豐切換
 │   ├── hooks/
 │   │   ├── useLiveRate.js      # 輪詢即時匯率
-│   │   └── useHistory.js       # 讀取歷史資料
+│   │   ├── useHistory.js       # 讀取歷史資料
+│   │   └── useBank.js          # 目前銀行（URL hash：#sinopac = 永豐）
 │   ├── utils/
 │   │   ├── boardTime.js        # boardTime 解析
 │   │   ├── market.js           # 更新時段判斷
-│   │   └── taiwanCalendar.js   # 台灣行事曆（國定假日／補班日）快取與抓取
+│   │   ├── taiwanCalendar.js   # 台灣行事曆（國定假日／補班日）快取與抓取
+│   │   ├── bank.js             # 銀行 ⇄ URL hash
+│   │   └── sinopacRate.js      # sinopac/realtime 轉成前端資料形狀
 │   └── styles/
 │       └── global.css
 ├── .github/workflows/
