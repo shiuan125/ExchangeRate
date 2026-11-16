@@ -130,7 +130,14 @@ rates/
 }
 ```
 
-永豐目前**沒有每日歸檔**：永豐頁盤後直接顯示 `sinopac/realtime`（即 15:30 收盤價），不顯示歷史走勢圖與依歷史計算的徽章／漲跌箭頭。
+### 3.2.2 永豐歷史 `sinopac_rates/{CUR}_{YEAR}`
+
+格式與 `rates/` 相同（日期為 key）。前端依銀行選 collection（`src/utils/bank.js` 的 `historyCollection`）。
+
+- **回補**：GAS `backfillSinopacHistory()` 一次性手動執行，從永豐 `GCSDsp/ETS_ListHistory.aspx`（`NoteFlag=N&BaseFlag=00`，最多 365 天）抓近 3 個月**即期**，以台灣行事曆濾掉非交易日（該 API 會把週末／假日補成前一日價格），四捨五入至小數 4 位。回補列**只有 `spotBuy/spotSell`**，沒有 `boardTime`。
+- **現鈔沒有回補**：同一支 API 的現鈔（`NoteFlag=Y`）一律回「系統忙線中」。現鈔歷史從上線日起由每日歸檔累積。
+- **每日歸檔**：GAS `marketClose`（16:00）把 `syncSinopacExchangeRate()` 結果同時寫入 `sinopac/realtime` 與 `sinopac_rates`（含現鈔）。
+- **資料不足的處理**：走勢圖只畫該模式買賣價都有值的日子（`src/utils/chartData.js`），不足 2 筆顯示「資料累積中」；徽章的涵蓋天數以**該欄位**最早有值的日期判斷（`computeRateBadge`），避免只有 1 天現鈔就標「近月最低」。
 
 **設計理由**：日期字串當 key，四個價格全存（就算前端目前只顯示部分，之後要加功能不用回頭補資料）。原始 `boardTime` 字串一併保留，方便日後除錯與驗證資料來源。
 
@@ -202,13 +209,15 @@ scripts/sync-calendar.js（GitHub Actions cron） --> TaiwanCalendar --> Firesto
 │   │   └── BankSwitch.jsx      # 國泰／永豐切換
 │   ├── hooks/
 │   │   ├── useLiveRate.js      # 輪詢即時匯率
-│   │   ├── useHistory.js       # 讀取歷史資料
+│   │   ├── useHistory.js       # 讀取單一年份歷史資料
+│   │   ├── useRateHistory.js   # 跨兩年歷史資料（依銀行選 collection）
 │   │   └── useBank.js          # 目前銀行（URL hash：#sinopac = 永豐）
 │   ├── utils/
 │   │   ├── boardTime.js        # boardTime 解析
 │   │   ├── market.js           # 更新時段判斷
 │   │   ├── taiwanCalendar.js   # 台灣行事曆（國定假日／補班日）快取與抓取
-│   │   ├── bank.js             # 銀行 ⇄ URL hash
+│   │   ├── bank.js             # 銀行 ⇄ URL hash、歷史 collection
+│   │   ├── chartData.js        # 走勢圖資料（濾掉缺值的日子）
 │   │   └── sinopacRate.js      # sinopac/realtime 轉成前端資料形狀
 │   └── styles/
 │       └── global.css
