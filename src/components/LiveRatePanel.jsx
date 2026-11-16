@@ -7,8 +7,6 @@ import { BankSwitch } from './BankSwitch';
 
 export function LiveRatePanel({ bank = 'cathay', onBankChange }) {
   const { data, error, loading, fetching } = useLiveRate(bank);
-  // 永豐目前沒有歷史資料，不顯示依歷史計算的徽章與漲跌箭頭
-  const withHistory = bank === 'cathay';
 
   return (
     <section>
@@ -34,9 +32,9 @@ export function LiveRatePanel({ bank = 'cathay', onBankChange }) {
         <>
           {error && <p className="error-banner">目前顯示的是上一次成功取得的資料。</p>}
           <div className="rate-cards">
-            <RateCard currency="USD" spot={data.usd.spot} cash={data.usd.cash} withHistory={withHistory} />
-            <RateCard currency="JPY" spot={data.jpy.spot} cash={data.jpy.cash} withHistory={withHistory} />
-            {data.gbp && <RateCard currency="GBP" spot={data.gbp.spot} withHistory={withHistory} />}
+            <RateCard currency="USD" spot={data.usd.spot} cash={data.usd.cash} bank={bank} />
+            <RateCard currency="JPY" spot={data.jpy.spot} cash={data.jpy.cash} bank={bank} />
+            {data.gbp && <RateCard currency="GBP" spot={data.gbp.spot} bank={bank} />}
           </div>
         </>
       )}

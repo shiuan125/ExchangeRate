@@ -20,3 +20,10 @@ test('hashForBank', () => {
   assert.equal(hashForBank('sinopac'), '#sinopac');
   assert.equal(hashForBank('cathay'), '');
 });
+
+test('historyCollection', async () => {
+  const { historyCollection } = await import('./bank.js');
+  assert.equal(historyCollection('cathay'), 'rates');
+  assert.equal(historyCollection('sinopac'), 'sinopac_rates');
+  assert.equal(historyCollection('foo'), 'rates');
+});

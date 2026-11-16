@@ -60,9 +60,9 @@ function RateGroup({ label, buy, sell, currency, variant, rows, prevRow }) {
   );
 }
 
-/** withHistory=false：不讀歷史，徽章與漲跌箭頭不顯示（永豐目前沒有歷史資料） */
-export function RateCard({ currency, spot, cash, withHistory = true }) {
-  const { rows } = useRateHistory(currency, withHistory);
+/** bank 決定徽章與漲跌箭頭用哪一家銀行的歷史資料比較 */
+export function RateCard({ currency, spot, cash, bank = 'cathay' }) {
+  const { rows } = useRateHistory(currency, bank);
   // 前次盤後收盤價：排除今天（今天收盤同步後才會出現在 rows 裡）
   const today = taipeiToday();
   const prevRow = [...rows].reverse().find((r) => r.date < today);

@@ -10,8 +10,7 @@ function App() {
     <div className="page">
       {/* key={bank}：切換銀行時重新掛載，避免前一家晚回來的資料顯示在另一家頁面 */}
       <LiveRatePanel key={bank} bank={bank} onBankChange={setBank} />
-      {/* 歷史走勢圖目前只有國泰的資料 */}
-      {bank === 'cathay' && <HistoryChart />}
+      <HistoryChart key={bank} bank={bank} />
       <Footer />
     </div>
   );

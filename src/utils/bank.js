@@ -9,3 +9,8 @@ export function bankFromHash(hash) {
 export function hashForBank(bank) {
   return bank === 'sinopac' ? '#sinopac' : '';
 }
+
+/** 銀行 -> 歷史收盤資料的 Firestore collection（格式相同：{CUR}_{YEAR} 文件，日期為 key） */
+export function historyCollection(bank) {
+  return bank === 'sinopac' ? 'sinopac_rates' : 'rates';
+}

@@ -77,11 +77,11 @@ function CustomTooltip({ active, payload, label, currency }) {
   );
 }
 
-export function HistoryChart() {
+export function HistoryChart({ bank = 'cathay' }) {
   const [mode, setMode] = useState('spot');
   const [currency, setCurrency] = useState('USD');
   const [range, setRange] = useState('1m');
-  const { rows, loading } = useRateHistory(currency);
+  const { rows, loading } = useRateHistory(currency, bank);
   const colors = useChartColors();
   const hasCash = currency !== 'GBP';
 
