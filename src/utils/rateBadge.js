@@ -1,4 +1,4 @@
-import { taipeiToday, dateKeyDaysAgo } from './date';
+import { taipeiToday, dateKeyDaysAgo } from './date.js';
 
 /** 由長到短，優先顯示涵蓋範圍最大的區間 */
 const WINDOWS = [
@@ -20,7 +20,10 @@ export function computeRateBadge(rows, current, field, kind) {
   if (!rows.length || typeof current !== 'number') return null;
 
   const today = taipeiToday();
-  const earliest = rows[0].date;
+  // 以「這個欄位」最早有值的日期判斷涵蓋範圍：永豐現鈔沒有回補，
+  // 若用整份資料的最早日期，只有一天現鈔也會被誤判成「近月最低」
+  const earliest = rows.find((r) => typeof r[field] === 'number')?.date;
+  if (!earliest) return null;
 
   for (const w of WINDOWS) {
     const cutoff = dateKeyDaysAgo(w.days - 1);

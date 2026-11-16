@@ -6,6 +6,7 @@ import { useRateHistory } from '../hooks/useRateHistory';
 import { useChartColors } from '../hooks/useChartColors';
 import { formatRate } from '../utils/format';
 import { dateKeyDaysAgo } from '../utils/date';
+import { buildChartData } from '../utils/chartData';
 
 const RANGES = [
   { value: '7d', label: '7天', days: 7 },
@@ -91,14 +92,7 @@ export function HistoryChart() {
 
   const data = useMemo(() => {
     const days = RANGES.find((r) => r.value === range)?.days ?? 30;
-    const cutoff = dateKeyDaysAgo(days - 1);
-    return rows
-      .filter((r) => r.date >= cutoff)
-      .map((r) => ({
-        date: r.date,
-        buy: mode === 'spot' ? r.spotBuy : r.cashBuy,
-        sell: mode === 'spot' ? r.spotSell : r.cashSell,
-      }));
+    return buildChartData(rows, mode, dateKeyDaysAgo(days - 1));
   }, [rows, mode, range]);
 
   const buyExtremes = useMemo(() => findExtremeIndexes(data, 'buy'), [data]);
