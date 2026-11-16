@@ -3,14 +3,20 @@ import { MarketStatus } from './MarketStatus';
 import { RateCard } from './RateCard';
 import { ThemeToggle } from './ThemeToggle';
 import { ElderModeToggle } from './ElderModeToggle';
+import { BankSwitch } from './BankSwitch';
 
-export function LiveRatePanel() {
-  const { data, error, loading, fetching } = useLiveRate();
+export function LiveRatePanel({ bank = 'cathay', onBankChange }) {
+  const { data, error, loading, fetching } = useLiveRate(bank);
+  // 永豐目前沒有歷史資料，不顯示依歷史計算的徽章與漲跌箭頭
+  const withHistory = bank === 'cathay';
 
   return (
     <section>
       <header className="header">
-        <h1 className="page-title">匯率</h1>
+        <div className="header-left">
+          <h1 className="page-title">匯率</h1>
+          {onBankChange && <BankSwitch bank={bank} onChange={onBankChange} />}
+        </div>
         <div className="header-right">
           {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}
           <div className="header-controls">
@@ -28,9 +34,9 @@ export function LiveRatePanel() {
         <>
           {error && <p className="error-banner">目前顯示的是上一次成功取得的資料。</p>}
           <div className="rate-cards">
-            <RateCard currency="USD" spot={data.usd.spot} cash={data.usd.cash} />
-            <RateCard currency="JPY" spot={data.jpy.spot} cash={data.jpy.cash} />
-            {data.gbp && <RateCard currency="GBP" spot={data.gbp.spot} />}
+            <RateCard currency="USD" spot={data.usd.spot} cash={data.usd.cash} withHistory={withHistory} />
+            <RateCard currency="JPY" spot={data.jpy.spot} cash={data.jpy.cash} withHistory={withHistory} />
+            {data.gbp && <RateCard currency="GBP" spot={data.gbp.spot} withHistory={withHistory} />}
           </div>
         </>
       )}
