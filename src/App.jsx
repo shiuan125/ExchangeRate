@@ -8,10 +8,10 @@ function App() {
 
   return (
     <div className="page">
-      {/* 切換銀行時重新掛載，避免前一家晚回來的資料顯示在另一家頁面。
-          兩個兄弟元件的 key 必須不同：重複的 key 會讓 React 對錯元件，留下舊銀行的面板 */}
+      {/* 即時面板切換銀行時重新掛載，避免前一家晚回來的資料顯示在另一家頁面 */}
       <LiveRatePanel key={`panel-${bank}`} bank={bank} onBankChange={setBank} />
-      <HistoryChart key={`chart-${bank}`} bank={bank} />
+      {/* 走勢圖不重新掛載，保留幣別／即期現金／區間設定；舊資料由 useRateHistory 擋掉 */}
+      <HistoryChart bank={bank} />
       <Footer />
     </div>
   );

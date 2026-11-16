@@ -3,16 +3,18 @@ import { fetchYearRows } from './useHistory';
 import { taipeiToday } from '../utils/date';
 import { historyCollection } from '../utils/bank';
 
-/** 抓某幣別跨今年／去年的歷史資料（合併排序），供「近N天最低/最高」徽章與歷史走勢圖使用 */
-/** @param {'cathay' | 'sinopac'} bank 決定讀哪一家銀行的歷史資料 */
+/**
+ * 抓某幣別跨今年／去年的歷史資料（合併排序），供「近N天最低/最高」徽章與歷史走勢圖使用
+ * @param {'cathay' | 'sinopac'} bank 決定讀哪一家銀行的歷史資料
+ */
 export function useRateHistory(currency, bank = 'cathay') {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const key = `${bank}/${currency}`;
+  // 記住手上的 rows 屬於哪一家銀行、哪個幣別：切換後、新資料回來前不顯示舊資料
+  const [state, setState] = useState({ key: null, rows: [] });
 
   useEffect(() => {
     let alive = true;
     const collection = historyCollection(bank);
-    setLoading(true);
     (async () => {
       const thisYear = taipeiToday().slice(0, 4);
       const lastYear = String(Number(thisYear) - 1);
@@ -22,17 +24,17 @@ export function useRateHistory(currency, bank = 'cathay') {
           fetchYearRows(currency, lastYear, collection),
           fetchYearRows(currency, thisYear, collection),
         ]);
-        if (!alive) return;
-        setRows([...prevRows, ...curRows].sort((a, b) => a.date.localeCompare(b.date)));
+        if (alive) {
+          setState({ key, rows: [...prevRows, ...curRows].sort((a, b) => a.date.localeCompare(b.date)) });
+        }
       } catch (e) {
         console.error(e);
-        if (alive) setRows([]);
-      } finally {
-        if (alive) setLoading(false);
+        if (alive) setState({ key, rows: [] });
       }
     })();
     return () => { alive = false; };
-  }, [currency, bank]);
+  }, [currency, bank, key]);
 
-  return { rows, loading };
+  const ready = state.key === key;
+  return { rows: ready ? state.rows : [], loading: !ready };
 }
