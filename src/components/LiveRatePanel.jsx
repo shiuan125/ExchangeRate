@@ -3,9 +3,8 @@ import { MarketStatus } from './MarketStatus';
 import { RateCard } from './RateCard';
 import { ThemeToggle } from './ThemeToggle';
 import { ElderModeToggle } from './ElderModeToggle';
-import { BankSwitch } from './BankSwitch';
 
-export function LiveRatePanel({ bank = 'cathay', onBankChange }) {
+export function LiveRatePanel({ bank = 'cathay' }) {
   const { data, error, loading, fetching } = useLiveRate(bank);
 
   return (
@@ -13,7 +12,6 @@ export function LiveRatePanel({ bank = 'cathay', onBankChange }) {
       <header className="header">
         <div className="header-left">
           <h1 className="page-title">匯率</h1>
-          {onBankChange && <BankSwitch bank={bank} onChange={onBankChange} />}
         </div>
         <div className="header-right">
           {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}

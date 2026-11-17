@@ -125,7 +125,8 @@ body {
 .page {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: var(--s-5) var(--s-4) var(--s-8);
+  /* 底部多留空間給浮動銀行切換列，避免蓋住頁尾 */
+  padding: var(--s-5) var(--s-4) calc(var(--s-8) + 56px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: var(--s-7);
@@ -530,6 +531,56 @@ body {
 }
 
 /* ==========================================================================
+   Bank bar —— 仿 iOS 浮動 tab bar（毛玻璃膠囊，固定在底部）
+   ========================================================================== */
+
+.bank-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--board) 72%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid color-mix(in srgb, var(--rule-bold) 60%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.bank-bar button {
+  font-family: var(--font-ui);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  min-width: 84px;
+  padding: 10px var(--s-5);
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-light);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 160ms ease, background 160ms ease, transform 120ms ease;
+}
+
+.bank-bar button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink);
+}
+
+.bank-bar button:active {
+  transform: scale(0.96);
+}
+
+[data-elder="true"] .bank-bar button {
+  min-width: 104px;
+  padding: var(--s-3) var(--s-5);
+}
+
+/* ==========================================================================
    Responsive
    ========================================================================== */
 
@@ -548,7 +599,7 @@ body {
     --t-hero: clamp(1.75rem, 9vw, 4rem);
   }
 
-  .segment:not(.segment--theme):not(.bank-switch) {
+  .segment:not(.segment--theme) {
     width: 100%;
   }
 
