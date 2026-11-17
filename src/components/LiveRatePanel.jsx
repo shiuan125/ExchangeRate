@@ -10,16 +10,13 @@ export function LiveRatePanel({ bank = 'cathay' }) {
   return (
     <section>
       <header className="header">
-        <div className="header-left">
-          <h1 className="page-title">匯率</h1>
+        {/* 第一列：標題置中、右側為大字／主題切換；第二列：盤況與報價時間靠右一行 */}
+        <h1 className="page-title">匯率</h1>
+        <div className="header-controls">
+          <ElderModeToggle />
+          <ThemeToggle />
         </div>
-        <div className="header-right">
-          {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}
-          <div className="header-controls">
-            <ElderModeToggle />
-            <ThemeToggle />
-          </div>
-        </div>
+        {data && <MarketStatus boardTime={data.boardTime} fetching={fetching} />}
       </header>
 
       {loading && !data && <p className="empty-state">載入中…</p>}

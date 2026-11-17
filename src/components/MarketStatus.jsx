@@ -34,7 +34,7 @@ export function MarketStatus({ boardTime, fetching }) {
         <span className={`status-dot status-dot--${statusClass}`} />
         {label}
       </span>
-      {timeLabel && <div className="board-time">{timeLabel}</div>}
+      {timeLabel && <span className="board-time">{timeLabel}</span>}
     </div>
   );
 }
