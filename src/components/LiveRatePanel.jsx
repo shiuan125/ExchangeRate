@@ -10,7 +10,7 @@ export function LiveRatePanel({ bank = 'cathay' }) {
   return (
     <section>
       <header className="header">
-        {/* 第一列：標題置中、右側為大字／主題切換；第二列：盤況與報價時間靠右一行 */}
+        {/* 第一列：標題靠左、右側為大字／主題切換；第二列：盤況與報價時間靠右一行 */}
         <h1 className="page-title">匯率</h1>
         <div className="header-controls">
           <ElderModeToggle />

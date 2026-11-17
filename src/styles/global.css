@@ -132,21 +132,16 @@ body {
   gap: var(--s-7);
 }
 
-/* 三欄格線：左右等寬讓標題真正置中，右欄放大字／主題切換 */
+/* 第一列：標題靠左、右側放大字／主題切換；第二列：盤況整列靠右 */
 .header {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
   align-items: center;
   row-gap: var(--s-2);
   margin-bottom: var(--s-5);
 }
 
-.header .page-title {
-  grid-column: 2;
-}
-
 .header .header-controls {
-  grid-column: 3;
   justify-self: end;
 }
 
