@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { useRateHistory } from '../hooks/useRateHistory';
 import { useChartColors } from '../hooks/useChartColors';
-import { formatRate } from '../utils/format';
+import { formatRate, rateDigits } from '../utils/format';
 import { dateKeyDaysAgo } from '../utils/date';
 import { buildChartData } from '../utils/chartData';
 
@@ -60,7 +60,7 @@ function findExtremeIndexes(data, dataKey) {
   return { maxIndex, minIndex };
 }
 
-function CustomTooltip({ active, payload, label, currency }) {
+function CustomTooltip({ active, payload, label, currency, bank }) {
   if (!active || !payload?.length) return null;
   // 賣出排在買入上面，跟圖表線條與圖例順序一致
   const sorted = [...payload].sort((a) => (a.dataKey === 'sell' ? -1 : 1));
@@ -70,7 +70,7 @@ function CustomTooltip({ active, payload, label, currency }) {
       {sorted.map((p) => (
         <div key={p.dataKey} className="chart-tooltip-row">
           <span className="eyebrow" style={{ color: p.color }}>{p.dataKey === 'buy' ? '買入' : '賣出'}</span>
-          <span className="num">{formatRate(p.value, currency)}</span>
+          <span className="num">{formatRate(p.value, currency, bank)}</span>
         </div>
       ))}
     </div>
@@ -108,7 +108,7 @@ export function HistoryChart({ bank = 'cathay' }) {
           {...props}
           stroke={stroke}
           board={colors.board}
-          label={formatRate(value, currency)}
+          label={formatRate(value, currency, bank)}
           isEdge={isEdge}
         />
       );
@@ -120,7 +120,7 @@ export function HistoryChart({ bank = 'cathay' }) {
           {...props}
           stroke={stroke}
           board={colors.board}
-          label={formatRate(value, currency)}
+          label={formatRate(value, currency, bank)}
           isEdge={isEdge}
         />
       );
@@ -177,9 +177,9 @@ export function HistoryChart({ bank = 'cathay' }) {
                 tickLine={false}
                 axisLine={false}
                 width={52}
-                tickFormatter={(v) => v.toFixed(currency === 'JPY' ? 4 : 2)}
+                tickFormatter={(v) => v.toFixed(rateDigits(currency, bank))}
               />
-              <Tooltip content={<CustomTooltip currency={currency} />} />
+              <Tooltip content={<CustomTooltip currency={currency} bank={bank} />} />
               <Legend
                 verticalAlign="top"
                 align="right"

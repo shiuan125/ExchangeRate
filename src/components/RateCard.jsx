@@ -6,8 +6,8 @@ import { taipeiToday } from '../utils/date';
 
 const NAMES = { USD: '美金', JPY: '日圓', GBP: '英鎊' };
 
-function RateNumber({ value, currency, variant }) {
-  const formatted = formatRate(value, currency);
+function RateNumber({ value, currency, bank, variant }) {
+  const formatted = formatRate(value, currency, bank);
   const { display, prev, flipping } = useFlip(formatted);
   return (
     <span className={`rate-value rate-value--${variant} num${flipping ? ' is-flipping' : ''}`}>
@@ -29,7 +29,7 @@ function ChangeArrow({ value, prev }) {
   );
 }
 
-function RateGroup({ label, buy, sell, currency, variant, rows, prevRow }) {
+function RateGroup({ label, buy, sell, currency, bank, variant, rows, prevRow }) {
   const buyBadge = computeRateBadge(rows, buy, `${variant}Buy`, 'high');
   const sellBadge = computeRateBadge(rows, sell, `${variant}Sell`, 'low');
 
@@ -41,7 +41,7 @@ function RateGroup({ label, buy, sell, currency, variant, rows, prevRow }) {
           <span className="eyebrow">買入</span>
           <span className="rate-hint">銀行跟你買</span>
           <div>
-            <RateNumber value={buy} currency={currency} variant={variant} />
+            <RateNumber value={buy} currency={currency} bank={bank} variant={variant} />
             <ChangeArrow value={buy} prev={prevRow?.[`${variant}Buy`]} />
           </div>
           {buyBadge && <span className="rate-badge">{buyBadge}</span>}
@@ -50,7 +50,7 @@ function RateGroup({ label, buy, sell, currency, variant, rows, prevRow }) {
           <span className="eyebrow">賣出</span>
           <span className="rate-hint">銀行賣給你</span>
           <div>
-            <RateNumber value={sell} currency={currency} variant={variant} />
+            <RateNumber value={sell} currency={currency} bank={bank} variant={variant} />
             <ChangeArrow value={sell} prev={prevRow?.[`${variant}Sell`]} />
           </div>
           {sellBadge && <span className="rate-badge">{sellBadge}</span>}
@@ -73,8 +73,8 @@ export function RateCard({ currency, spot, cash, bank = 'cathay' }) {
         <span className="card-code">{currency}</span>
         <span className="card-name">{NAMES[currency]}</span>
       </div>
-      <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} variant="spot" rows={rows} prevRow={prevRow} />
-      {cash && <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} variant="cash" rows={rows} prevRow={prevRow} />}
+      <RateGroup label="即期" buy={spot.buy} sell={spot.sell} currency={currency} bank={bank} variant="spot" rows={rows} prevRow={prevRow} />
+      {cash && <RateGroup label="現金" buy={cash.buy} sell={cash.sell} currency={currency} bank={bank} variant="cash" rows={rows} prevRow={prevRow} />}
     </div>
   );
 }
