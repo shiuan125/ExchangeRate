@@ -132,21 +132,21 @@ body {
   gap: var(--s-7);
 }
 
-/* 第一列：標題靠左、右側放大字／主題切換；第二列：盤況整列靠右 */
+/* 單列：左邊標題＋盤況膠囊，右邊控制膠囊；太窄時盤況膠囊會換到標題下方 */
 .header {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
-  row-gap: var(--s-2);
+  justify-content: space-between;
+  gap: var(--s-3);
   margin-bottom: var(--s-5);
 }
 
-.header .header-controls {
-  justify-self: end;
-}
-
-.header .market-status {
-  grid-column: 1 / -1;
+.header-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+  min-width: 0;
 }
 
 .page-title {
@@ -199,22 +199,24 @@ body {
    MarketStatus
    ========================================================================== */
 
-/* 盤況與報價時間排成一行靠右 */
-.market-status {
-  display: flex;
-  justify-content: flex-end;
+/* 盤況膠囊：狀態點＋狀態＋時間，完整時間放在 title 與螢幕報讀文字 */
+.status-chip {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: var(--s-3);
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--board);
+  border: 1px solid var(--rule);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--ink-mid);
   white-space: nowrap;
 }
 
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-  color: var(--ink-mid);
+.status-chip-time {
+  color: var(--ink-light);
+  letter-spacing: 0;
 }
 
 .status-dot {
@@ -239,11 +241,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .status-dot--live { animation: none; }
-}
-
-.board-time {
-  font-size: var(--t-xs);
-  color: var(--ink-light);
 }
 
 /* ==========================================================================
@@ -440,10 +437,29 @@ body {
   height: 30px;
 }
 
+/* 大字與主題切換合併成同一顆膠囊，中間用細線分隔 */
 .header-controls {
   display: inline-flex;
   align-items: center;
-  gap: var(--s-2);
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+}
+
+.header-controls .segment--theme {
+  padding: 0 0 0 2px;
+  border: none;
+  border-left: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+}
+
+.header-controls .segment--theme button,
+.header-controls .elder-toggle {
+  border-radius: 999px;
 }
 
 .elder-toggle {
@@ -456,17 +472,16 @@ body {
   font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 700;
-  background: var(--paper);
-  border: 1px solid var(--rule);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-sm);
   color: var(--ink-light);
   cursor: pointer;
-  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+  transition: color 140ms ease, background 140ms ease;
 }
 
 .elder-toggle[aria-pressed="true"] {
   background: var(--ink);
-  border-color: var(--ink);
   color: var(--paper);
 }
 
