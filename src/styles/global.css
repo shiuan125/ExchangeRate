@@ -531,27 +531,99 @@ body {
 }
 
 /* ==========================================================================
-   Bank bar —— 仿 iOS 浮動 tab bar（毛玻璃膠囊，固定在底部）
+   Bank bar —— 仿 Apple Liquid Glass 浮動 tab bar（固定在底部）
+   玻璃本體：強模糊 + 高飽和讓背景透出色彩；
+   ::before 是上緣高光與內側立體邊，::after 是由上往下的光澤；
+   .bank-bar-lens 是選取中的玻璃鏡片，切換時用彈簧曲線滑動。
    ========================================================================== */
 
 .bank-bar {
+  --pad: 5px;
+  --glass-tint: rgba(255, 255, 255, 0.42);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass-edge-low: rgba(255, 255, 255, 0.25);
+  --glass-shade: rgba(0, 0, 0, 0.06);
+  --lens-tint: rgba(255, 255, 255, 0.7);
+
   position: fixed;
   left: 50%;
   bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 50;
-  display: flex;
-  gap: 2px;
-  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(var(--count), 1fr);
+  padding: var(--pad);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--board) 72%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border: 1px solid color-mix(in srgb, var(--rule-bold) 60%, transparent);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  isolation: isolate;
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(14px) saturate(200%) brightness(1.05);
+  backdrop-filter: blur(14px) saturate(200%) brightness(1.05);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .bank-bar {
+  --glass-tint: rgba(40, 40, 46, 0.45);
+  --glass-edge: rgba(255, 255, 255, 0.35);
+  --glass-edge-low: rgba(255, 255, 255, 0.08);
+  --glass-shade: rgba(0, 0, 0, 0.3);
+  --lens-tint: rgba(255, 255, 255, 0.16);
+}
+
+/* 玻璃邊緣：上亮下暗的內側邊，做出厚度與折射感 */
+.bank-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow:
+    inset 0 1px 0.5px var(--glass-edge),
+    inset 0 -1px 0.5px var(--glass-edge-low),
+    inset 1px 0 0.5px var(--glass-edge-low),
+    inset -1px 0 0.5px var(--glass-edge-low),
+    inset 0 -6px 12px var(--glass-shade);
+}
+
+/* 上半部的柔和光澤 */
+.bank-bar::after {
+  content: '';
+  position: absolute;
+  inset: 1px 10% 50% 10%;
+  border-radius: 999px 999px 50% 50% / 999px 999px 100% 100%;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .bank-bar::after {
+  opacity: 0.25;
+}
+
+.bank-bar-lens {
+  position: absolute;
+  top: var(--pad);
+  bottom: var(--pad);
+  left: var(--pad);
+  width: calc((100% - var(--pad) * 2) / var(--count));
+  transform: translateX(calc(var(--index) * 100%));
+  border-radius: 999px;
+  z-index: 0;
+  background: var(--lens-tint);
+  box-shadow:
+    inset 0 1px 0.5px var(--glass-edge),
+    inset 0 -1px 1px var(--glass-edge-low),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 略微過衝的彈簧曲線，模擬 iOS 鏡片滑動 */
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.5, 1);
 }
 
 .bank-bar button {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-ui);
   font-size: var(--t-sm);
   font-weight: 600;
@@ -560,24 +632,37 @@ body {
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--ink-light);
+  color: var(--ink-mid);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: color 160ms ease, background 160ms ease, transform 120ms ease;
+  transition: color 200ms ease, transform 160ms ease;
 }
 
 .bank-bar button[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--ink) 10%, transparent);
   color: var(--ink);
 }
 
 .bank-bar button:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 [data-elder="true"] .bank-bar button {
   min-width: 104px;
   padding: var(--s-3) var(--s-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bank-bar-lens,
+  .bank-bar button {
+    transition: none;
+  }
+}
+
+/* 不支援 backdrop-filter 的瀏覽器改用不透明底，避免文字看不清楚 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bank-bar {
+    background: var(--board);
+  }
 }
 
 /* ==========================================================================
